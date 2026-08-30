@@ -32,6 +32,14 @@ function GoogleIcon() {
 export function GoogleButton({ label }: { label: string }) {
   const [loading, setLoading] = useState(false);
 
+  // Test function to show the redirect URL without actually starting OAuth
+  function showRedirectUrl() {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const redirectUrl = `${baseUrl}/auth/callback`;
+    
+    alert(`Google will redirect to: ${redirectUrl}\n\nMake sure this exact URL is in your Google Console under "Authorized redirect URIs"`);
+  }
+
   async function handleClick() {
     setLoading(true);
     const supabase = createClient();
@@ -40,7 +48,11 @@ export function GoogleButton({ label }: { label: string }) {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const redirectUrl = `${baseUrl}/auth/callback`;
     
-    console.log('Initiating Google OAuth with redirect URL:', redirectUrl);
+    console.log('=== GOOGLE OAUTH DEBUG ===');
+    console.log('Base URL:', baseUrl);
+    console.log('Redirect URL:', redirectUrl);
+    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('Starting Google OAuth...');
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -57,22 +69,35 @@ export function GoogleButton({ label }: { label: string }) {
       console.error('Google OAuth initiation error:', error);
       toast.error("Couldn't start Google sign-in", { description: error.message });
       setLoading(false);
+    } else {
+      console.log('Google OAuth initiated successfully - browser should redirect to Google');
     }
     // On success the browser is redirected to Google, so no further local
     // state update is needed.
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="lg"
-      className="w-full rounded-full"
-      disabled={loading}
-      onClick={handleClick}
-    >
-      <GoogleIcon />
-      {label}
-    </Button>
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        className="w-full rounded-full"
+        disabled={loading}
+        onClick={handleClick}
+      >
+        <GoogleIcon />
+        {label}
+      </Button>
+      
+      {/* Debug button - remove in production */}
+      <button
+        type="button"
+        onClick={showRedirectUrl}
+        className="w-full text-xs text-gray-500 hover:text-gray-700 py-1"
+      >
+        🔍 Debug: Show redirect URL
+      </button>
+    </div>
   );
 }
