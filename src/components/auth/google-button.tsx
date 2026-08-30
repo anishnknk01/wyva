@@ -35,17 +35,26 @@ export function GoogleButton({ label }: { label: string }) {
   async function handleClick() {
     setLoading(true);
     const supabase = createClient();
+    
+    // Construct the redirect URL explicitly
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const redirectUrl = `${baseUrl}/auth/callback`;
+    
+    console.log('Initiating Google OAuth with redirect URL:', redirectUrl);
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
         },
       },
     });
+    
     if (error) {
+      console.error('Google OAuth initiation error:', error);
       toast.error("Couldn't start Google sign-in", { description: error.message });
       setLoading(false);
     }
