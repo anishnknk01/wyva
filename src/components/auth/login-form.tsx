@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Mail, KeyRound, ArrowLeft } from "lucide-react";
+import { Mail, KeyRound, ArrowLeft, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +14,41 @@ import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<"password" | "magic-link">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  // Handle OAuth errors from URL params
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const description = searchParams.get('description');
+    
+    if (error) {
+      let errorMessage = "Authentication failed";
+      
+      switch (error) {
+        case 'access_denied':
+          errorMessage = "Google sign-in was cancelled";
+          break;
+        case 'redirect_uri_mismatch':
+          errorMessage = "Configuration error - please contact support";
+          break;
+        case 'session_exchange':
+          errorMessage = description || "Session creation failed";
+          break;
+        case 'missing_code':
+          errorMessage = "Authentication response incomplete";
+          break;
+        default:
+          errorMessage = description || errorMessage;
+      }
+      
+      toast.error("Google Sign-In Error", { description: errorMessage });
+    }
+  }, [searchParams]);
 
   async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
