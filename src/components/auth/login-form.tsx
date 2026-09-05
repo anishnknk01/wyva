@@ -67,8 +67,8 @@ export function LoginForm() {
     
     toast.success("Welcome back!");
     
-    // Redirect to the original page or default to tasks
-    const redirectTo = searchParams.get('redirect') || '/tasks';
+    // Redirect to the original page or default to dashboard
+    const redirectTo = searchParams.get('redirect') || '/dashboard';
     router.push(redirectTo);
     router.refresh();
   }
@@ -83,7 +83,7 @@ export function LoginForm() {
     const supabase = createClient();
     
     // Include redirect URL in magic link
-    const redirectTo = searchParams.get('redirect') || '/tasks';
+    const redirectTo = searchParams.get('redirect') || '/dashboard';
     const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
     
     const { error } = await supabase.auth.signInWithOtp({

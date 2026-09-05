@@ -30,13 +30,19 @@ export async function proxy(request: NextRequest) {
 
   // Protected routes that require authentication
   const protectedPaths = [
+    '/dashboard',
     '/tasks',
     '/create-task',
     '/my-tasks',
     '/wysa-tasks',
     '/pay-task',
     '/task-posted',
-    '/become-a-wysa'
+    '/become-a-wysa',
+    '/messages',
+    '/saved',
+    '/payments',
+    '/profile',
+    '/settings'
   ];
 
   // Check if the current path requires authentication
@@ -51,10 +57,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If user is authenticated and trying to access auth pages, redirect to tasks
+  // If user is authenticated and trying to access auth pages, redirect to dashboard
   const authPages = ['/login', '/signup'];
   if (user && authPages.includes(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL('/tasks', request.url));
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return supabaseResponse;

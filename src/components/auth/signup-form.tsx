@@ -38,7 +38,7 @@ export function SignupForm() {
     
     // Get redirect URL from query params
     const urlParams = new URLSearchParams(window.location.search);
-    const redirectTo = urlParams.get('redirect') || '/tasks';
+    const redirectTo = urlParams.get('redirect') || '/dashboard';
     const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
     
     const { error } = await supabase.auth.signUp({

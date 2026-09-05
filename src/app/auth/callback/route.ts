@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const code = searchParams.get("code");
     const error = searchParams.get("error");
     const errorDescription = searchParams.get("error_description");
-    const next = searchParams.get("next") ?? "/tasks";
+    const next = searchParams.get("next") ?? "/dashboard";
 
     console.log('Auth callback received:', { 
       code: code ? 'present' : 'missing', 

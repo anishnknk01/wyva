@@ -49,7 +49,7 @@ export function GoogleButton({ label }: { label: string }) {
     
     // Get the redirect parameter from current URL
     const urlParams = new URLSearchParams(window.location.search);
-    const redirectTo = urlParams.get('redirect') || '/tasks';
+    const redirectTo = urlParams.get('redirect') || '/dashboard';
     const callbackUrl = `${baseUrl}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
     
     console.log('=== GOOGLE OAUTH DEBUG ===');
