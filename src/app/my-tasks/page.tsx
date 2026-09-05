@@ -1,15 +1,11 @@
-import type { Metadata } from "next";
+"use client";
 
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { MyTasksPage } from "@/components/my-tasks/my-tasks-page";
+import { withAuth } from "@/lib/auth-guard";
 
-export const metadata: Metadata = {
-  title: "My Tasks — WYSA",
-  description: "Track the tasks you've posted and their current status.",
-};
-
-export default function MyTasksRoute() {
+function MyTasksRoute() {
   return (
     <>
       <Navbar />
@@ -20,3 +16,5 @@ export default function MyTasksRoute() {
     </>
   );
 }
+
+export default withAuth(MyTasksRoute);

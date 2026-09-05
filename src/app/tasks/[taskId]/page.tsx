@@ -7,8 +7,9 @@ import { Footer } from "@/components/layout/footer";
 import { TaskDetailPage } from "@/components/tasks/task-detail-page";
 import { TaskNotFound } from "@/components/ui/task-not-found";
 import { useTask } from "@/lib/use-task";
+import { withAuth } from "@/lib/auth-guard";
 
-export default function TaskDetailRoute() {
+function TaskDetailRoute() {
   const params = useParams<{ taskId: string }>();
   const taskId = Array.isArray(params.taskId) ? params.taskId[0] : params.taskId;
   const { task, loading } = useTask(taskId);
@@ -23,3 +24,5 @@ export default function TaskDetailRoute() {
     </>
   );
 }
+
+export default withAuth(TaskDetailRoute);

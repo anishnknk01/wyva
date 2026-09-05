@@ -35,12 +35,18 @@ export function SignupForm() {
 
     setLoading(true);
     const supabase = createClient();
+    
+    // Get redirect URL from query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTo = urlParams.get('redirect') || '/tasks';
+    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl,
       },
     });
     setLoading(false);

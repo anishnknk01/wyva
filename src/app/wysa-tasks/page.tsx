@@ -1,15 +1,11 @@
-import type { Metadata } from "next";
+"use client";
 
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { WysaTasksPage } from "@/components/wysa-tasks/wysa-tasks-page";
+import { withAuth } from "@/lib/auth-guard";
 
-export const metadata: Metadata = {
-  title: "Wysa Dashboard — WYSA",
-  description: "Track available tasks, accepted tasks, completed tasks, and your estimated earnings.",
-};
-
-export default function WysaTasksRoute() {
+function WysaTasksRoute() {
   return (
     <>
       <Navbar />
@@ -20,3 +16,5 @@ export default function WysaTasksRoute() {
     </>
   );
 }
+
+export default withAuth(WysaTasksRoute);

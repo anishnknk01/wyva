@@ -46,18 +46,23 @@ export function GoogleButton({ label }: { label: string }) {
     
     // Construct the redirect URL explicitly
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const redirectUrl = `${baseUrl}/auth/callback`;
+    
+    // Get the redirect parameter from current URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTo = urlParams.get('redirect') || '/tasks';
+    const callbackUrl = `${baseUrl}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
     
     console.log('=== GOOGLE OAUTH DEBUG ===');
     console.log('Base URL:', baseUrl);
-    console.log('Redirect URL:', redirectUrl);
+    console.log('Redirect URL:', callbackUrl);
+    console.log('Final destination:', redirectTo);
     console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
     console.log('Starting Google OAuth...');
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: redirectUrl,
+        redirectTo: callbackUrl,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',

@@ -64,8 +64,12 @@ export function LoginForm() {
       toast.error("Couldn't log in", { description: error.message });
       return;
     }
+    
     toast.success("Welcome back!");
-    router.push("/tasks");
+    
+    // Redirect to the original page or default to tasks
+    const redirectTo = searchParams.get('redirect') || '/tasks';
+    router.push(redirectTo);
     router.refresh();
   }
 
@@ -77,10 +81,15 @@ export function LoginForm() {
     }
     setLoading(true);
     const supabase = createClient();
+    
+    // Include redirect URL in magic link
+    const redirectTo = searchParams.get('redirect') || '/tasks';
+    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+    
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl,
       },
     });
     setLoading(false);

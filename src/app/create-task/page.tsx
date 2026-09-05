@@ -1,16 +1,13 @@
+"use client";
+
 import { Suspense } from "react";
-import type { Metadata } from "next";
 
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { CreateTaskForm } from "@/components/create-task/create-task-form";
+import { withAuth } from "@/lib/auth-guard";
 
-export const metadata: Metadata = {
-  title: "Post a Task — WYSA",
-  description: "Tell us what you need help with in Mangalore.",
-};
-
-export default function CreateTaskPage() {
+function CreateTaskPage() {
   return (
     <>
       <Navbar />
@@ -33,3 +30,5 @@ export default function CreateTaskPage() {
     </>
   );
 }
+
+export default withAuth(CreateTaskPage);

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+"use client";
 
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -7,14 +7,9 @@ import { HowItWorks } from "@/components/become-a-wysa/how-it-works";
 import { WhyWysa } from "@/components/become-a-wysa/why-wysa";
 import { WhoCanApply } from "@/components/become-a-wysa/who-can-apply";
 import { ApplicationForm } from "@/components/become-a-wysa/application-form";
+import { withAuth } from "@/lib/auth-guard";
 
-export const metadata: Metadata = {
-  title: "Become a Wysa — WYSA",
-  description:
-    "Apply to become a Wysa in Mangalore. Meet people, explore the city and earn on your schedule.",
-};
-
-export default function BecomeAWysaPage() {
+function BecomeAWysaPage() {
   return (
     <>
       <Navbar />
@@ -46,3 +41,5 @@ export default function BecomeAWysaPage() {
     </>
   );
 }
+
+export default withAuth(BecomeAWysaPage);
