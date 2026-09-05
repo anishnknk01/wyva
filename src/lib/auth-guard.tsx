@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -44,7 +44,7 @@ export function useAuthGuard(redirectTo: string = '/login') {
   return { user, loading };
 }
 
-export function withAuth<T extends object>(
+export function withAuth<T extends Record<string, any>>(
   WrappedComponent: React.ComponentType<T>,
   redirectTo: string = '/login'
 ) {
@@ -52,10 +52,13 @@ export function withAuth<T extends object>(
     const { user, loading } = useAuthGuard(redirectTo);
 
     if (loading) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral"></div>
-        </div>
+      return React.createElement(
+        'div',
+        { className: 'flex items-center justify-center min-h-screen' },
+        React.createElement(
+          'div',
+          { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-coral' }
+        )
       );
     }
 
@@ -63,6 +66,6 @@ export function withAuth<T extends object>(
       return null; // Redirecting in useAuthGuard
     }
 
-    return <WrappedComponent {...props} />;
+    return React.createElement(WrappedComponent, props);
   };
 }
