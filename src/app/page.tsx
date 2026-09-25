@@ -4,7 +4,6 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Hero } from "@/components/sections/hero";
 import { Activities } from "@/components/sections/activities";
-import { ExploreMangalore } from "@/components/sections/explore-mangalore";
 import { Trust } from "@/components/sections/trust";
 import { FinalCta } from "@/components/sections/final-cta";
 
@@ -21,7 +20,6 @@ export default function Home() {
       <main className="flex-1">
         <Hero />
         <Activities />
-        <ExploreMangalore />
         <Trust />
         <FinalCta />
       </main>

@@ -67,9 +67,33 @@ export function LoginForm() {
     
     toast.success("Welcome back!");
     
-    // Redirect to the original page or default to dashboard
-    const redirectTo = searchParams.get('redirect') || '/dashboard';
-    router.push(redirectTo);
+    // If a specific redirect was requested, honour it
+    const requestedRedirect = searchParams.get('redirect');
+    if (requestedRedirect) {
+      router.push(requestedRedirect);
+      router.refresh();
+      return;
+    }
+
+    // Otherwise route by role
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      const role = profile?.role ?? user.user_metadata?.role;
+      if (role === "worker") {
+        // Worker dashboard will gate to onboarding if not yet complete
+        router.push("/worker/dashboard");
+      } else {
+        // customer or no role → customer dashboard
+        router.push("/dashboard");
+      }
+    } else {
+      router.push("/dashboard");
+    }
     router.refresh();
   }
 
@@ -159,14 +183,14 @@ export function LoginForm() {
               autoComplete="current-password"
             />
           </div>
-          <Button type="submit" size="lg" className="mt-1 w-full rounded-full" disabled={loading}>
+          <Button type="submit" size="lg" className="mt-1 w-full rounded-full bg-teal-600 hover:bg-teal-700" disabled={loading}>
             <KeyRound className="size-4" />
-            {loading ? "Logging in..." : "Log in"}
+            {loading ? "Logging in…" : "Log in"}
           </Button>
           <button
             type="button"
             onClick={() => setMode("magic-link")}
-            className="text-center text-sm font-medium text-coral hover:underline"
+            className="text-center text-sm font-medium text-teal-600 hover:underline"
           >
             Log in with an email link instead
           </button>
@@ -185,14 +209,14 @@ export function LoginForm() {
               autoComplete="email"
             />
           </div>
-          <Button type="submit" size="lg" className="mt-1 w-full rounded-full" disabled={loading}>
+          <Button type="submit" size="lg" className="mt-1 w-full rounded-full bg-teal-600 hover:bg-teal-700" disabled={loading}>
             <Mail className="size-4" />
-            {loading ? "Sending..." : "Send login link"}
+            {loading ? "Sending…" : "Send login link"}
           </Button>
           <button
             type="button"
             onClick={() => setMode("password")}
-            className="text-center text-sm font-medium text-coral hover:underline"
+            className="text-center text-sm font-medium text-teal-600 hover:underline"
           >
             Log in with a password instead
           </button>
@@ -201,7 +225,7 @@ export function LoginForm() {
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="font-medium text-coral hover:underline">
+        <Link href="/signup" className="font-medium text-teal-600 hover:underline">
           Sign up
         </Link>
       </p>

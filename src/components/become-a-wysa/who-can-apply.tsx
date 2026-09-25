@@ -8,7 +8,7 @@ export function WhoCanApply() {
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-            Who can become a Wysa
+            Who can apply
           </h2>
         </div>
 
@@ -26,7 +26,7 @@ export function WhoCanApply() {
 
         <div className="mt-5 flex items-center gap-2 rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
           <Info className="size-4 shrink-0 text-coral" />
-          Wysas must be adults (18 years or older).
+          Wysas must be 18 or older.
         </div>
       </div>
     </section>

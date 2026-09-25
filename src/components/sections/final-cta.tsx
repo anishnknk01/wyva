@@ -1,35 +1,56 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { LayoutGrid, RefreshCw, Zap, SmilePlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+const perks = [
+  {
+    icon: LayoutGrid,
+    text: "17+ categories, one platform",
+  },
+  {
+    icon: RefreshCw,
+    text: "Simple, fast task matching",
+  },
+  {
+    icon: Zap,
+    text: "Tasks done on time, within budget",
+  },
+  {
+    icon: SmilePlus,
+    text: "Pay only when you're satisfied",
+  },
+];
+
 export function FinalCta() {
   return (
-    <section className="relative overflow-hidden bg-primary py-20 sm:py-24">
-      <div
-        aria-hidden
-        className="absolute -top-16 -left-16 h-64 w-64 rounded-full bg-white/10 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="absolute -bottom-20 -right-10 h-72 w-72 rounded-full bg-sun/20 blur-3xl"
-      />
-      <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
-        <h2 className="font-heading text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
-          Tell us what you need.
-        </h2>
-        <p className="mt-3 text-primary-foreground/80">
-          Post a task and let the right person in Mangalore come to you.
-        </p>
-        <Button
-          size="lg"
-          variant="secondary"
-          className="mt-8 h-12 rounded-full px-8 text-base font-semibold"
-          render={<Link href="/create-task" />}
-        >
-          Post a Task
-          <ArrowRight className="size-4" />
-        </Button>
+    <section className="border-t border-gray-200 bg-white py-14 sm:py-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* top row */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-heading text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+            Get more done with Wysa
+          </h2>
+          <Button
+            size="lg"
+            className="shrink-0 rounded-md bg-gray-900 px-6 text-sm font-semibold text-white hover:bg-gray-800"
+            render={<Link href="/signup" />}
+          >
+            Join now
+          </Button>
+        </div>
+
+        <hr className="my-8 border-gray-200" />
+
+        {/* perks row */}
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+          {perks.map(({ icon: Icon, text }) => (
+            <div key={text} className="flex flex-col gap-3">
+              <Icon className="size-8 text-gray-700 stroke-[1.5]" />
+              <p className="text-sm text-gray-600 leading-snug">{text}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

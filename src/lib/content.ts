@@ -27,23 +27,23 @@ export type Activity = {
 // Titles here match src/lib/tasks.ts `taskCategories` values exactly so
 // homepage cards can deep-link into task creation with a preset category.
 export const activities: Activity[] = [
-  { title: "Companion", icon: Users, description: "Someone to join you" },
-  { title: "Hangout", icon: Users, description: "Grab coffee or just chill" },
-  { title: "Walk", icon: Footprints, description: "A stroll around the block" },
-  { title: "Movies", icon: Clapperboard, description: "Catch the latest show" },
-  { title: "Food", icon: UtensilsCrossed, description: "Try that new place" },
+  { title: "Companion", icon: Users, description: "Someone to be there with you" },
+  { title: "Hangout", icon: Users, description: "Coffee, chai, or just chill" },
+  { title: "Walk", icon: Footprints, description: "A walk around the city" },
+  { title: "Movies", icon: Clapperboard, description: "Catch a film together" },
+  { title: "Food", icon: UtensilsCrossed, description: "Try somewhere new" },
   { title: "Events", icon: PartyPopper, description: "Concerts, meetups & more" },
-  { title: "Shopping", icon: ShoppingBag, description: "Malls and markets" },
-  { title: "Local exploration", icon: Compass, description: "Discover new spots" },
+  { title: "Shopping", icon: ShoppingBag, description: "Malls and local markets" },
+  { title: "Local exploration", icon: Compass, description: "Discover hidden spots" },
   { title: "Travel", icon: Plane, description: "Day trips nearby" },
   { title: "Elder assistance", icon: Accessibility, description: "Support for seniors" },
   { title: "Hospital/appointment accompaniment", icon: Stethoscope, description: "Company for appointments" },
-  { title: "Errands", icon: ListChecks, description: "Get things ticked off" },
+  { title: "Errands", icon: ListChecks, description: "Tick things off the list" },
   { title: "Study", icon: BookOpen, description: "Focused study sessions" },
   { title: "Gaming", icon: Gamepad2, description: "Co-op or casual play" },
-  { title: "Sports", icon: Dumbbell, description: "Casual games & fitness" },
-  { title: "Photography", icon: Camera, description: "Photo walks & shoots" },
-  { title: "Tech help", icon: Wrench, description: "Sort out your gadgets" },
+  { title: "Sports", icon: Dumbbell, description: "Casual games and fitness" },
+  { title: "Photography", icon: Camera, description: "Photo walks and shoots" },
+  { title: "Tech help", icon: Wrench, description: "Sort out your devices" },
 ];
 
 export type LocalSpot = {
@@ -99,8 +99,7 @@ export const mangaloreAreas = [
 ];
 
 export const navLinks = [
-  { label: "Find Tasks", href: "/tasks" },
-  { label: "Explore", href: "/#explore" },
+  { label: "Browse Tasks", href: "/tasks" },
   { label: "Become a Wysa", href: "/become-a-wysa" },
   { label: "Safety", href: "/safety" },
   { label: "Help", href: "#help" },

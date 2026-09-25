@@ -9,7 +9,7 @@ export function HowItWorks() {
             How it works
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Three simple steps to get started as a Wysa.
+            Three steps to start earning as a Wysa.
           </p>
         </div>
 

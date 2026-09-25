@@ -134,11 +134,10 @@ export function ApplicationForm() {
           <CheckCircle2 className="size-6" />
         </span>
         <h2 className="mt-4 font-heading text-xl font-semibold">
-          Application received!
+          Application submitted
         </h2>
         <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-          Thanks for applying to Wysa. We&apos;ll review your information
-          and contact you about the next step.
+          We'll review your details and be in touch about next steps.
         </p>
         <div className="mt-4 flex items-center gap-1.5 rounded-full bg-teal/10 px-3 py-1.5 text-xs font-semibold text-teal">
           <CheckCircle2 className="size-3.5" />
@@ -162,9 +161,9 @@ export function ApplicationForm() {
       onSubmit={handleSubmit}
       className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
     >
-      <h2 className="font-heading text-lg font-semibold">Application form</h2>
+      <h2 className="font-heading text-lg font-semibold">Application</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Takes about five minutes. Fields marked * are required.
+        Takes about 5 minutes. Fields marked * are required.
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -189,7 +188,7 @@ export function ApplicationForm() {
             id="preferred-name"
             value={preferredName}
             onChange={(e) => setPreferredName(e.target.value)}
-            placeholder="What should we call you?"
+            placeholder="What do people call you?"
             className="h-10"
           />
         </div>
@@ -333,7 +332,7 @@ export function ApplicationForm() {
           id="intro"
           value={intro}
           onChange={(e) => setIntro(e.target.value)}
-          placeholder="Tell people a bit about yourself and what you enjoy doing."
+          placeholder="A short intro — who you are, what you enjoy, why you'd make a great Wysa."
           className="min-h-24"
           aria-invalid={!!errors.intro}
         />
@@ -348,7 +347,7 @@ export function ApplicationForm() {
           aria-invalid={!!errors.agree}
         />
         <span>
-          I agree to follow Wysa&apos;s community and safety guidelines.
+          I agree to WYSA&apos;s community and safety guidelines.
         </span>
       </label>
       {errors.agree && (
@@ -362,7 +361,7 @@ export function ApplicationForm() {
         className="mt-6 w-full rounded-full sm:w-auto"
       >
         <Sparkles className="size-4" />
-        {submitting ? "Submitting..." : "Submit application"}
+        {submitting ? "Submitting…" : "Submit application"}
       </Button>
     </form>
   );

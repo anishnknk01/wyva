@@ -6,6 +6,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TaskCategory, TaskStatus, DisputeReason, PaymentMethod } from "@/lib/tasks";
+import { sendSystemMessage } from "@/lib/message-store";
 
 export type TaskRating = {
   stars: number;
@@ -21,6 +22,10 @@ export type Task = {
   category: TaskCategory | "";
   area: string;
   locationNote: string;
+  locationCoordinates?: {
+    latitude: number;
+    longitude: number;
+  };
   date: string;
   time: string;
   durationId: string;
@@ -40,6 +45,7 @@ export type Task = {
   dispute: { reason: DisputeReason; submittedAt: string } | null;
   userRating: TaskRating | null;
   wysaRating: TaskRating | null;
+  photos?: string[];
   createdAt: string;
 };
 
@@ -81,6 +87,11 @@ function rowToTask(row: TaskRow): Task {
     // functions via a follow-up query rather than a join here.
     userRating: null,
     wysaRating: null,
+    photos: row.photos || [],
+    locationCoordinates: row.location_coordinates ? {
+      latitude: row.location_coordinates.lat || row.location_coordinates.latitude,
+      longitude: row.location_coordinates.lng || row.location_coordinates.longitude
+    } : undefined,
     createdAt: row.created_at,
   };
 }
@@ -161,6 +172,12 @@ export async function saveTask(task: Omit<Task, "createdAt">): Promise<Task | nu
       category: task.category,
       area: task.area,
       location_note: task.locationNote,
+      ...(task.locationCoordinates ? {
+        location_coordinates: {
+          lat: task.locationCoordinates.latitude,
+          lng: task.locationCoordinates.longitude,
+        }
+      } : {}),
       task_date: task.date || null,
       task_time: task.time || null,
       duration_id: task.durationId,
@@ -217,6 +234,13 @@ export async function updateTask(
   if (updates.category !== undefined) patch.category = updates.category;
   if (updates.area !== undefined) patch.area = updates.area;
   if (updates.locationNote !== undefined) patch.location_note = updates.locationNote;
+  if (updates.locationCoordinates) {
+    // Only set if the column exists in the DB — omit entirely if not provided
+    patch.location_coordinates = {
+      lat: updates.locationCoordinates.latitude,
+      lng: updates.locationCoordinates.longitude,
+    };
+  }
   if (updates.date !== undefined) patch.task_date = updates.date || null;
   if (updates.time !== undefined) patch.task_time = updates.time || null;
   if (updates.durationId !== undefined) patch.duration_id = updates.durationId;
@@ -261,11 +285,31 @@ export async function submitRating(
   stars: number,
   review: string
 ): Promise<boolean> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("ratings")
-    .insert({ task_id: taskId, rater_id: raterId, ratee_id: rateeId, stars, review });
-  return !error;
+  try {
+    const response = await fetch('/api/ratings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        taskId,
+        ratedId: rateeId,
+        rating: stars,
+        review: review || null,
+        ratingType: 'task_completion'
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Rating submission failed:', await response.text());
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("submitRating failed", error);
+    return false;
+  }
 }
 
 export async function listAllTasksForCustomer(customerId: string): Promise<Task[]> {
@@ -325,4 +369,154 @@ export async function listWysaCompletedTasks(wysaId: string): Promise<Task[]> {
 export async function calculateWysaEarnings(wysaId: string): Promise<number> {
   const tasks = await listWysaCompletedTasks(wysaId);
   return tasks.reduce((sum, t) => sum + t.budget, 0);
+}
+
+// Update task status and send system message
+export async function updateTaskStatusWithMessage(
+  taskId: string,
+  newStatus: TaskStatus,
+  wysaId?: string
+): Promise<Task | null> {
+  const supabase = createClient();
+  
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    console.error("updateTaskStatusWithMessage failed - not authenticated", authError);
+    return null;
+  }
+
+  // Get current task
+  const currentTask = await loadTask(taskId);
+  if (!currentTask) {
+    console.error("updateTaskStatusWithMessage failed - task not found");
+    return null;
+  }
+
+  // Update task status
+  const updateData: any = { 
+    status: newStatus,
+    updated_at: new Date().toISOString()
+  };
+
+  if (wysaId && newStatus === 'wysa_accepted') {
+    updateData.accepted_wysa_id = wysaId;
+  }
+
+  if (wysaId && newStatus === 'confirmed') {
+    updateData.confirmed_wysa_id = wysaId;
+  }
+
+  const { data: updatedTask, error } = await supabase
+    .from("tasks")
+    .update(updateData)
+    .eq("id", taskId)
+    .select()
+    .single();
+
+  if (error || !updatedTask) {
+    console.error("updateTaskStatusWithMessage failed - update error", error);
+    return null;
+  }
+
+  // Send system message based on status change
+  let messageText = '';
+  let receiverId = '';
+
+  switch (newStatus) {
+    case 'wysa_accepted':
+      messageText = 'Wysa has accepted your task request!';
+      receiverId = currentTask.customerId;
+      break;
+    case 'confirmed':
+      messageText = 'Task has been confirmed. Looking forward to helping you!';
+      receiverId = currentTask.customerId;
+      break;
+    case 'in_progress':
+      messageText = 'Task is now in progress.';
+      receiverId = wysaId === user.id ? currentTask.customerId : (updatedTask.accepted_wysa_id || updatedTask.confirmed_wysa_id || '');
+      break;
+    case 'completed':
+      messageText = 'Task has been marked as completed.';
+      receiverId = wysaId === user.id ? currentTask.customerId : (updatedTask.accepted_wysa_id || updatedTask.confirmed_wysa_id || '');
+      break;
+    case 'payment_released':
+      messageText = 'Payment has been released. Thank you!';
+      receiverId = updatedTask.accepted_wysa_id || updatedTask.confirmed_wysa_id || '';
+      break;
+  }
+
+  // Send system message if we have a message and receiver
+  if (messageText && receiverId && receiverId !== user.id) {
+    await sendSystemMessage(taskId, receiverId, messageText);
+    
+    // Send push notification for task status update
+    try {
+      let notificationTitle = '';
+      let notificationBody = messageText;
+      
+      switch (newStatus) {
+        case 'wysa_accepted':
+          notificationTitle = 'Task Accepted!';
+          break;
+        case 'confirmed':
+          notificationTitle = 'Task Confirmed';
+          break;
+        case 'in_progress':
+          notificationTitle = 'Task Started';
+          break;
+        case 'completed':
+          notificationTitle = 'Task Completed';
+          break;
+        case 'payment_released':
+          notificationTitle = 'Payment Released';
+          break;
+      }
+
+      if (notificationTitle) {
+        await fetch('/api/notifications/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: receiverId,
+            title: notificationTitle,
+            body: notificationBody,
+            tag: `task-${taskId}-${newStatus}`,
+            data: {
+              taskId,
+              type: 'task_update',
+              status: newStatus,
+              url: `/mobile/my-tasks/${taskId}`,
+            },
+          }),
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send push notification:', error);
+      // Don't fail the task update if push notification fails
+    }
+  }
+
+  return updatedTask as Task;
+}
+
+// Accept a task as a Wysa
+export async function acceptTask(taskId: string): Promise<Task | null> {
+  return await updateTaskStatusWithMessage(taskId, 'wysa_accepted');
+}
+
+// Confirm a task (customer confirms Wysa)
+export async function confirmTask(taskId: string): Promise<Task | null> {
+  return await updateTaskStatusWithMessage(taskId, 'confirmed');
+}
+
+// Mark task as completed
+export async function completeTask(taskId: string): Promise<Task | null> {
+  return await updateTaskStatusWithMessage(taskId, 'completed');
+}
+
+// Release payment
+export async function releasePayment(taskId: string): Promise<Task | null> {
+  return await updateTaskStatusWithMessage(taskId, 'payment_released');
 }

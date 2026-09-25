@@ -10,7 +10,7 @@ export function WhyWysa() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-            Why Wysa
+            Why Wysa works for you
           </h2>
         </div>
 

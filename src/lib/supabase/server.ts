@@ -12,6 +12,11 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // 5 second timeout — prevents 25s hangs when Supabase is unreachable
+      global: {
+        fetch: (url, options) =>
+          fetch(url, { ...options, signal: AbortSignal.timeout(5000) }),
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll();

@@ -1,41 +1,58 @@
 import Link from "next/link";
-
 import { activities } from "@/lib/content";
+
+// Soft pastel background colours per category card (cycles through the list)
+const cardBgs = [
+  "bg-pink-100",
+  "bg-purple-100",
+  "bg-emerald-100",
+  "bg-rose-100",
+  "bg-yellow-100",
+  "bg-sky-100",
+  "bg-orange-100",
+  "bg-teal-100",
+  "bg-indigo-100",
+  "bg-lime-100",
+  "bg-red-100",
+  "bg-cyan-100",
+  "bg-amber-100",
+  "bg-fuchsia-100",
+  "bg-green-100",
+  "bg-blue-100",
+  "bg-violet-100",
+];
 
 export function Activities() {
   return (
-    <section id="activities" className="bg-background py-20 sm:py-24">
+    <section id="activities" className="bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-            What&apos;s the plan?
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Pick a category and post a task, a Wysa nearby can pick it up.
-          </p>
-        </div>
+        {/* heading */}
+        <h2 className="font-heading text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          What do you need?
+        </h2>
 
-        <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
+        {/* horizontal scroll row */}
+        <div className="mt-8 flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
           {activities.map((activity, index) => {
             const Icon = activity.icon;
+            const bg = cardBgs[index % cardBgs.length];
             return (
               <Link
                 key={activity.title}
                 href={`/create-task?category=${encodeURIComponent(activity.title)}`}
-                style={{ animationDelay: `${index * 40}ms` }}
-                className="group animate-fade-up flex flex-col items-start gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all duration-200 hover:-translate-y-1 hover:border-coral/40 hover:shadow-md sm:p-5"
+                className="group snap-start shrink-0 w-52 sm:w-64 rounded-2xl overflow-hidden flex flex-col transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg"
               >
-                <span className="flex size-10 items-center justify-center rounded-xl bg-coral/10 text-coral transition-colors group-hover:bg-coral group-hover:text-coral-foreground">
-                  <Icon className="size-5" />
-                </span>
-                <span>
-                  <span className="block font-heading text-sm font-semibold sm:text-base">
+                {/* dark green label */}
+                <div className="bg-[#0f172a] px-5 py-4 min-h-[84px] flex items-start">
+                  <span className="font-semibold text-white text-base leading-snug">
                     {activity.title}
                   </span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground sm:text-sm">
-                    {activity.description}
-                  </span>
-                </span>
+                </div>
+
+                {/* illustration / icon area */}
+                <div className={`${bg} flex-1 flex items-center justify-center py-12`}>
+                  <Icon className="size-16 text-gray-700 opacity-80 transition-transform duration-200 group-hover:scale-110" />
+                </div>
               </Link>
             );
           })}

@@ -1,50 +1,60 @@
 import Link from "next/link";
-import { MapPin, ArrowUpRight } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 import { localSpots } from "@/lib/content";
 
+// Soft pastel bg per card
+const cardBgs = [
+  "bg-teal-100",
+  "bg-orange-100",
+  "bg-pink-100",
+  "bg-amber-100",
+  "bg-emerald-100",
+];
+
 export function ExploreMangalore() {
   return (
-    <section id="explore" className="bg-cream py-20 sm:py-24">
+    <section id="explore" className="bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-            Explore Mangalore with a Wysa
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            From beach evenings to city strolls, someone local always knows
-            the best way to spend it.
-          </p>
-        </div>
+        {/* heading */}
+        <h2 className="font-heading text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          Explore Mangalore
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          From beach evenings to city strolls, someone local always knows the best way to spend it.
+        </p>
 
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {localSpots.map((spot, index) => (
-            <Link
-              key={spot.name}
-              href={`/create-task?area=${encodeURIComponent(spot.area)}`}
-              style={{ animationDelay: `${index * 60}ms` }}
-              className="group animate-fade-up relative overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-            >
-              <div
-                className={`relative h-40 w-full bg-gradient-to-br ${spot.gradient} transition-transform duration-500 group-hover:scale-105`}
+        {/* horizontal scroll row */}
+        <div className="mt-8 flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
+          {localSpots.map((spot, index) => {
+            const bg = cardBgs[index % cardBgs.length];
+            return (
+              <Link
+                key={spot.name}
+                href={`/create-task?area=${encodeURIComponent(spot.area)}`}
+                className="group snap-start shrink-0 w-52 sm:w-60 rounded-2xl overflow-hidden flex flex-col transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg"
               >
-                <div className="absolute inset-0 bg-black/10" />
-                <ArrowUpRight className="absolute right-4 top-4 size-5 text-white/90" />
-              </div>
-              <div className="p-5">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-coral">
-                  <MapPin className="size-3.5" />
-                  {spot.area}
+                {/* dark green label */}
+                <div className="bg-[#0f172a] px-4 py-3 min-h-[80px] flex flex-col justify-between">
+                  <span className="font-semibold text-white text-sm leading-snug">
+                    {spot.name}
+                  </span>
+                  <span className="flex items-center gap-1 text-green-300 text-xs mt-1">
+                    <MapPin className="size-3" />
+                    {spot.area}
+                  </span>
                 </div>
-                <h3 className="mt-1.5 font-heading text-lg font-semibold">
-                  {spot.name}
-                </h3>
-                <p className="mt-1.5 text-sm text-muted-foreground">
-                  {spot.description}
-                </p>
-              </div>
-            </Link>
-          ))}
+
+                {/* illustration area */}
+                <div className={`${bg} flex-1 flex flex-col items-center justify-center py-8 px-4`}>
+                  <MapPin className="size-10 text-gray-600 opacity-70 mb-2 transition-transform duration-200 group-hover:scale-110" />
+                  <p className="text-xs text-center text-gray-600 leading-snug">
+                    {spot.description}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

@@ -25,6 +25,8 @@ import { DisputeDialog } from "@/components/my-tasks/dispute-dialog";
 import { RateDialog } from "@/components/my-tasks/rate-dialog";
 import { ChatDialog } from "@/components/my-tasks/chat-dialog";
 import { RequestCallDialog } from "@/components/my-tasks/request-call-dialog";
+import { PhotoGallery } from "@/components/mobile/photo-gallery";
+import { SimpleMap } from "@/components/mobile/simple-map";
 import {
   formatCurrency,
   formatDateLong,
@@ -140,6 +142,24 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
 
         <p className="mt-3 font-heading text-lg font-semibold">{task.title}</p>
         <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>
+
+        {/* Photo Gallery */}
+        {task.photos && task.photos.length > 0 && (
+          <div className="mt-4">
+            <PhotoGallery photos={task.photos} maxPreview={4} />
+          </div>
+        )}
+
+        {/* Location Map */}
+        {task.locationCoordinates && (
+          <div className="mt-4">
+            <SimpleMap 
+              coordinates={task.locationCoordinates}
+              address={task.locationNote || `${task.area}, Mangalore`}
+              showDirections={true}
+            />
+          </div>
+        )}
 
         <dl className="mt-5 flex flex-col gap-3 text-sm">
           <div className="flex items-center justify-between gap-3">

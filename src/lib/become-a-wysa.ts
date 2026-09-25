@@ -48,40 +48,37 @@ export const applicationInterests = [
 export const howItWorksSteps = [
   {
     number: "01",
-    title: "Create your profile",
-    description:
-      "Tell us who you are, what you're into, and where you're based in Mangalore.",
+    title: "Build your profile",
+    description: "Tell us who you are, where you're based, and what you're comfortable helping with.",
   },
   {
     number: "02",
-    title: "Choose what you can help with",
-    description:
-      "Pick the activities and everyday tasks you're comfortable helping with.",
+    title: "Set your availability",
+    description: "Choose the tasks and times that work for you. No fixed schedule required.",
   },
   {
     number: "03",
-    title: "Get bookings and earn",
-    description:
-      "Once approved, people nearby can find and book you for plans that fit your schedule.",
+    title: "Get booked and earn",
+    description: "Once approved, people nearby can book you directly. Get paid per task.",
   },
 ] as const;
 
 export const whyWysaCards = [
   {
     title: "Flexible",
-    description: "Choose when you're available.",
+    description: "Work when you want. No fixed hours.",
   },
   {
     title: "Local",
-    description: "Start by meeting people around Mangalore.",
+    description: "Meet people in your neighbourhood.",
   },
   {
     title: "Social",
-    description: "Meet new people and share experiences.",
+    description: "Build connections while earning.",
   },
   {
-    title: "Earn",
-    description: "Turn your free time into extra income.",
+    title: "Paid",
+    description: "Turn free time into real income.",
   },
 ] as const;
 
@@ -89,7 +86,7 @@ export const whoCanApply = [
   "College students",
   "Young professionals",
   "Freelancers",
-  "People with free time",
+  "Anyone with free time",
   "Local guides",
-  "Friendly, responsible people",
+  "Friendly, responsible adults",
 ] as const;

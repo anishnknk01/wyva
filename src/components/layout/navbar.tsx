@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { LogOut, Menu } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
@@ -17,11 +16,13 @@ import {
 } from "@/components/ui/sheet";
 import { navLinks } from "@/lib/content";
 import { createClient } from "@/lib/supabase/client";
+import { useRole } from "@/hooks/use-role";
 import { signOut } from "@/app/auth/actions";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const role = useRole();
 
   useEffect(() => {
     const supabase = createClient();
@@ -36,19 +37,22 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center shrink-0">
-          <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
-            <Image
-              src="/wysa-logo.png"
-              alt="WYSA logo"
-              fill
-              sizes="48px"
-              className="object-cover"
-              priority
-            />
+          <span className="font-heading text-2xl font-extrabold tracking-tight text-gray-900">
+            wysa<span className="text-teal-600">.</span>
           </span>
         </Link>
 
         <ul className="hidden items-center gap-7 lg:flex">
+          {user && (
+            <li>
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Dashboard
+              </Link>
+            </li>
+          )}
           {navLinks.map((link) => (
             <li key={link.href}>
               <Link
@@ -74,10 +78,11 @@ export function Navbar() {
               Login
             </Button>
           )}
-          <Button size="lg" render={<Link href="/create-task" />}>
-            Post a Task
-          </Button>
-        </div>
+          {role !== "worker" && (
+            <Button size="lg" className="bg-teal-600 hover:bg-teal-700" render={<Link href="/create-task" />}>
+              Post a Task
+            </Button>
+          )}        </div>
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
@@ -95,17 +100,21 @@ export function Navbar() {
           <SheetContent side="right" className="w-72">
             <SheetHeader>
               <SheetTitle className="sr-only">WYSA menu</SheetTitle>
-              <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
-                <Image
-                  src="/wysa-logo.png"
-                  alt="WYSA logo"
-                  fill
-                  sizes="40px"
-                  className="object-cover"
-                />
+              <span className="font-heading text-xl font-extrabold tracking-tight text-gray-900">
+                wysa<span className="text-teal-600">.</span>
               </span>
             </SheetHeader>
             <div className="flex flex-col gap-1 px-4">
+              {user && (
+                <SheetClose
+                  render={<Link href="/dashboard" />}
+                  onClick={() => setOpen(false)}
+                >
+                  <span className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted">
+                    Dashboard
+                  </span>
+                </SheetClose>
+              )}
               {navLinks.map((link) => (
                 <SheetClose
                   key={link.href}
@@ -135,14 +144,16 @@ export function Navbar() {
                     </span>
                   </SheetClose>
                 )}
-                <SheetClose
-                  render={<Link href="/create-task" />}
-                  onClick={() => setOpen(false)}
-                >
-                  <span className="flex h-9 w-full items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground">
-                    Post a Task
-                  </span>
-                </SheetClose>
+                {role !== "worker" && (
+                  <SheetClose
+                    render={<Link href="/create-task" />}
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className="flex h-9 w-full items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground">
+                      Post a Task
+                    </span>
+                  </SheetClose>
+                )}
               </div>
             </div>
           </SheetContent>

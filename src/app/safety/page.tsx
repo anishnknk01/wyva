@@ -13,26 +13,22 @@ export const metadata: Metadata = {
 const safetyFeatures = [
   {
     title: "Verified profiles",
-    description:
-      "Wysas go through a profile verification process before they can accept tasks.",
+    description: "Every Wysa is ID-verified before they can accept tasks.",
     icon: ShieldCheck,
   },
   {
-    title: "In-app communication",
-    description:
-      "Chat and coordinate without sharing your personal phone number until you're ready.",
+    title: "In-app messaging",
+    description: "Coordinate without sharing your phone number until you're ready.",
     icon: MessageCircle,
   },
   {
     title: "Emergency contact",
-    description:
-      "Add an emergency contact to any task posted for a parent, grandparent, or friend.",
+    description: "Add an emergency contact to any task — one tap alerts them instantly.",
     icon: ShieldAlert,
   },
   {
     title: "Report or block",
-    description:
-      "Report a concern or block a profile directly from a chat or task. Our team can review reported activity.",
+    description: "Report or block anyone directly from a chat or task. Our team reviews all reports.",
     icon: Flag,
   },
 ];
@@ -51,8 +47,7 @@ export default function SafetyPage() {
               Safety at WYSA
             </h1>
             <p className="mt-2 text-muted-foreground">
-              A few of the features and processes WYSA is built around to
-              make every task feel a little safer.
+              The features and processes that keep every task safe.
             </p>
           </div>
 
@@ -79,10 +74,7 @@ export default function SafetyPage() {
           </div>
 
           <div className="mt-8 rounded-2xl border border-border bg-muted/40 p-5 text-sm text-muted-foreground">
-            This page describes platform features and processes for this
-            prototype. It does not guarantee the conduct of any individual
-            user, and does not replace contacting local emergency services if
-            you are ever in immediate danger.
+            This page describes platform features for this prototype. It does not guarantee the conduct of any individual user and does not replace contacting emergency services if you are in immediate danger.
           </div>
         </div>
       </main>

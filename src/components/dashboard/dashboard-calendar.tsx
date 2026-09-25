@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import type { DashboardData } from "@/hooks/use-dashboard-data";
 
-export function DashboardCalendar() {
+interface DashboardCalendarProps {
+  data: DashboardData;
+}
+
+export function DashboardCalendar({ data }: DashboardCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   
   // Get current month details
@@ -49,8 +54,22 @@ export function DashboardCalendar() {
     });
   };
   
-  // Sample task dates (you can replace with real data)
-  const taskDates = [5, 7, 15, 23];
+  // Real task dates for the currently viewed month — combines tasks the
+  // user posted and tasks they've accepted, so both sides see their
+  // schedule reflected on the calendar.
+  const taskDates = useMemo(() => {
+    const dates = new Set<number>();
+    // For customers, only show dates of tasks they posted
+    const allRelevantTasks = data.myPostedTasks ?? [];
+    for (const task of allRelevantTasks) {
+      if (!task.date) continue;
+      const taskDate = new Date(task.date);
+      if (taskDate.getFullYear() === currentYear && taskDate.getMonth() === currentMonth) {
+        dates.add(taskDate.getDate());
+      }
+    }
+    return dates;
+  }, [data.myPostedTasks, currentYear, currentMonth]);
 
   return (
     <Card>
@@ -97,7 +116,7 @@ export function DashboardCalendar() {
             }
             
             const isToday = day === today && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
-            const hasTask = taskDates.includes(day);
+            const hasTask = taskDates.has(day);
             
             return (
               <button

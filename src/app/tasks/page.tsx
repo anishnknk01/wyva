@@ -2,9 +2,8 @@
 
 import type { Metadata } from "next";
 
-import { Navbar } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
 import { TasksPage } from "@/components/tasks/tasks-page";
+import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout";
 import { withAuth } from "@/lib/auth-guard";
 
 // Note: metadata export doesn't work with client components
@@ -12,13 +11,9 @@ import { withAuth } from "@/lib/auth-guard";
 
 function TasksRoute() {
   return (
-    <>
-      <Navbar />
-      <main className="flex-1">
-        <TasksPage />
-      </main>
-      <Footer />
-    </>
+    <DashboardLayoutWrapper>
+      <TasksPage />
+    </DashboardLayoutWrapper>
   );
 }
 

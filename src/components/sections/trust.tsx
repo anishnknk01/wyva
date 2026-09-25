@@ -1,70 +1,101 @@
-import { ShieldCheck, MessageCircle, Siren, Star, LifeBuoy } from "lucide-react";
+import { ShieldCheck, MessageCircle, Siren, Star, LifeBuoy, Headphones } from "lucide-react";
 
 const trustFeatures = [
   {
     title: "Verified profiles",
-    description:
-      "Wysas go through an ID and profile verification process before they can accept a task.",
+    description: "Every Wysa is ID-verified before they can accept a task.",
     icon: ShieldCheck,
+    accent: "from-teal-400 to-emerald-500",
+    bg: "bg-teal-50",
+    iconColor: "text-teal-600",
   },
   {
-    title: "In-app communication",
-    description:
-      "Chat and coordinate without sharing your personal number until you're ready.",
+    title: "In-app messaging",
+    description: "Coordinate without sharing your phone number until you're ready.",
     icon: MessageCircle,
+    accent: "from-blue-400 to-indigo-500",
+    bg: "bg-blue-50",
+    iconColor: "text-blue-600",
   },
   {
-    title: "Simulated escrow",
-    description:
-      "Your payment is held in the platform and only released to the Wysa once you confirm the task is done.",
+    title: "Secure payments",
+    description: "Payment is held until you confirm the task is complete. No risk.",
     icon: LifeBuoy,
+    accent: "from-violet-400 to-purple-500",
+    bg: "bg-violet-50",
+    iconColor: "text-violet-600",
   },
   {
     title: "Ratings & reviews",
-    description:
-      "Every task can be rated by both sides, so the community stays honest and reliable.",
+    description: "Both sides rate every task, keeping the community honest.",
     icon: Star,
+    accent: "from-amber-400 to-orange-500",
+    bg: "bg-amber-50",
+    iconColor: "text-amber-600",
   },
   {
     title: "Emergency contact",
-    description:
-      "A one-tap emergency contact option is available throughout every task.",
+    description: "One tap to alert an emergency contact during any task.",
     icon: Siren,
+    accent: "from-rose-400 to-red-500",
+    bg: "bg-rose-50",
+    iconColor: "text-rose-600",
+  },
+  {
+    title: "24/7 support",
+    description: "Run into an issue? Our team is available to help at any time.",
+    icon: Headphones,
+    accent: "from-sky-400 to-cyan-500",
+    bg: "bg-sky-50",
+    iconColor: "text-sky-600",
   },
 ];
 
 export function Trust() {
   return (
-    <section id="safety" className="bg-background py-20 sm:py-24">
+    <section id="safety" className="bg-gray-950 py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-            People you can feel good about meeting.
+
+        {/* heading */}
+        <div className="mx-auto max-w-2xl text-center mb-16">
+          <span className="inline-block rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-teal-400 mb-4">
+            Safety first
+          </span>
+          <h2 className="font-heading text-4xl font-bold tracking-tight text-white sm:text-5xl">
+            People you can{" "}
+            <span className="bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+              trust.
+            </span>
           </h2>
-          <p className="mt-3 text-muted-foreground">
-            WYSA is built around a set of platform features and processes
-            designed to make every task feel a little safer.
-          </p>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {trustFeatures.map((feature, index) => {
+        {/* cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {trustFeatures.map((feature) => {
             const Icon = feature.icon;
             return (
               <div
                 key={feature.title}
-                style={{ animationDelay: `${index * 60}ms` }}
-                className="animate-fade-up rounded-2xl border border-border bg-card p-6 transition-shadow hover:shadow-md"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:-translate-y-1"
               >
-                <span className="flex size-11 items-center justify-center rounded-xl bg-teal/10 text-teal">
-                  <Icon className="size-5" />
-                </span>
-                <h3 className="mt-4 font-heading text-lg font-semibold">
+                {/* gradient glow top-left */}
+                <div className={`absolute -top-10 -left-10 h-32 w-32 rounded-full bg-gradient-to-br ${feature.accent} opacity-10 blur-2xl transition-opacity duration-300 group-hover:opacity-20`} />
+
+                {/* icon */}
+                <div className={`relative flex size-12 items-center justify-center rounded-xl ${feature.bg} mb-5`}>
+                  <Icon className={`size-6 ${feature.iconColor} stroke-[1.5]`} />
+                </div>
+
+                {/* text */}
+                <h3 className="relative text-lg font-semibold text-white">
                   {feature.title}
                 </h3>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="relative mt-2 text-sm text-gray-400 leading-relaxed">
                   {feature.description}
                 </p>
+
+                {/* bottom gradient line */}
+                <div className={`absolute bottom-0 left-0 h-0.5 w-full bg-gradient-to-r ${feature.accent} opacity-0 transition-opacity duration-300 group-hover:opacity-60`} />
               </div>
             );
           })}

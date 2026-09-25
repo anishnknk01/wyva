@@ -40,9 +40,31 @@ export async function GET(request: Request) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         
         if (!exchangeError) {
-          console.log('Session exchange successful, redirecting to:', next);
-          // Success - redirect to the app
-          return NextResponse.redirect(`${origin}${next}`);
+          // Look up the user's role and redirect accordingly
+          const { data: { user } } = await supabase.auth.getUser();
+          let destination = next;
+
+          if (next === "/dashboard" || next === "/worker/dashboard") {
+            // Re-derive from role in case this is a first-time OAuth login
+            if (user) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("role")
+                .eq("id", user.id)
+                .maybeSingle();
+
+              const role = profile?.role ?? user.user_metadata?.role;
+
+              if (role === "worker") {
+                destination = "/worker/dashboard";
+              } else {
+                // customer or no role set → customer dashboard
+                destination = "/dashboard";
+              }
+            }
+          }
+
+          return NextResponse.redirect(`${origin}${destination}`);
         } else {
           console.error("Session exchange error:", exchangeError);
           const encodedDescription = encodeURIComponent(exchangeError.message);

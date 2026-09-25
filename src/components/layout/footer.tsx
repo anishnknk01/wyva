@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { toast } from "sonner";
 import { AtSign, Globe, MessageCircle } from "lucide-react";
 
@@ -41,19 +40,12 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
             <Link href="/" className="flex items-center">
-              <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
-                <Image
-                  src="/wysa-logo.png"
-                  alt="WYSA logo"
-                  fill
-                  sizes="48px"
-                  className="object-cover"
-                />
+              <span className="font-heading text-2xl font-extrabold tracking-tight text-gray-900">
+                wysa<span className="text-teal-600">.</span>
               </span>
             </Link>
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-              Find your vibe. Post a task, and let a trusted Wysa nearby
-              take it on, built for Mangalore.
+              Verified locals for everyday tasks. Built for Mangalore.
             </p>
             <div className="mt-5 flex items-center gap-3">
               {[AtSign, MessageCircle, Globe].map((Icon, i) => (
@@ -95,7 +87,7 @@ export function Footer() {
 
         <div className="mt-10 flex flex-col items-center gap-3 border-t border-border pt-6 text-center sm:flex-row sm:justify-between sm:text-left">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} WYSA. Operating in Mangalore, Karnataka.
+            © {new Date().getFullYear()} WYSA. Mangalore, Karnataka.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             {navLinks.map((link) => (

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { DashboardSidebar } from './dashboard-sidebar';
-import { DashboardHeader } from './dashboard-header';
-import { DashboardMain } from './dashboard-main';
+import { DashboardContent } from './dashboard-content';
 import { useAuthGuard } from '@/lib/auth-guard';
 
 export function DashboardLayout() {
@@ -12,27 +11,28 @@ export function DashboardLayout() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <DashboardSidebar 
-        sidebarOpen={sidebarOpen} 
-        setSidebarOpen={setSidebarOpen} 
-      />
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Sidebar - Fixed width like in the image */}
+      <div className="w-64 flex-shrink-0">
+        <DashboardSidebar 
+          sidebarOpen={sidebarOpen} 
+          setSidebarOpen={setSidebarOpen} 
+        />
+      </div>
       
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader 
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <DashboardContent 
           user={user}
           setSidebarOpen={setSidebarOpen}
         />
-        <DashboardMain user={user} />
       </div>
     </div>
   );
