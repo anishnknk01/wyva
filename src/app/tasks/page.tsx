@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { TasksPage } from "@/components/tasks/tasks-page";
 import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout";
@@ -22,7 +22,9 @@ function TasksRoute() {
 
   return (
     <DashboardLayoutWrapper>
-      <TasksPage />
+      <Suspense fallback={<div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-500" /></div>}>
+        <TasksPage />
+      </Suspense>
     </DashboardLayoutWrapper>
   );
 }

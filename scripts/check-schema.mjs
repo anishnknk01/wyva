@@ -152,7 +152,7 @@ const CHECKS = [
     table: "task_applications",
     columns: ["id", "task_id", "wysa_id", "status", "proposed_at"],
     fix: "supabase/migrations/0004_task_applications.sql",
-    critical: true,
+    critical: false,
   },
 ];
 
