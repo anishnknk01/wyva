@@ -5,6 +5,10 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { LoginForm } from "@/components/auth/login-form";
 
+// LoginForm uses useSearchParams() — force dynamic so Next.js never tries
+// to statically prerender this page (which would crash the Vercel build).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Log in — WYSA",
   description: "Log in to your WYSA account.",
