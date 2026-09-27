@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Script from "next/script";
 import {
@@ -106,7 +106,6 @@ const INITIAL: WizardData = {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export function TaskWizard() {
   const router       = useRouter();
-  const searchParams = useSearchParams();
   const { user }     = useUser();
 
   const [step,        setStep]        = useState(1);
@@ -121,15 +120,20 @@ export function TaskWizard() {
   const [mainPhotoIdx, setMainPhotoIdx] = useState(0);
 
   useEffect(() => {
-    const cat  = searchParams.get("category");
-    const area = searchParams.get("area");
+    // Read URL params via window.location (client-only) instead of
+    // useSearchParams() which crashes Next.js static prerender on Vercel.
+    const params = typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : new URLSearchParams();
+    const cat  = params.get("category");
+    const area = params.get("area");
     if (cat) {
       const card = CATEGORY_CARDS.find(c => c.value === cat || c.label.toLowerCase() === cat.toLowerCase());
       setData(d => ({ ...d, categoryLabel: card?.label ?? cat, category: (LABEL_TO_CATEGORY[card?.label ?? ""] ?? cat) as TaskCategory }));
       setStep(2);
     }
     if (area) setData(d => ({ ...d, area }));
-  }, [searchParams]);
+  }, []);
 
   function patch(p: Partial<WizardData>) { setData(d => ({ ...d, ...p })); }
   function next() { setStep(s => Math.min(s + 1, TOTAL_STEPS)); window.scrollTo({ top: 0 }); }

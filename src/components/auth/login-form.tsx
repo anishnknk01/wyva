@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Mail, KeyRound, ArrowLeft, AlertCircle } from "lucide-react";
+import { Mail, KeyRound, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,41 +14,44 @@ import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [mode, setMode] = useState<"password" | "magic-link">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  // Read search params client-side only (never during SSR/static generation)
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  const [redirectPath, setRedirectPath] = useState("/dashboard");
 
-  // Handle OAuth errors from URL params
   useEffect(() => {
-    const error = searchParams.get('error');
-    const description = searchParams.get('description');
-    
+    // Safe to use window.location here — this only runs in the browser,
+    // never during static prerender. Replaces the old useSearchParams() call
+    // which crashed Next.js static generation on Vercel.
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
+    const description = params.get("description");
+    const redirect = params.get("redirect");
+
+    if (redirect) setRedirectPath(redirect);
+
     if (error) {
-      let errorMessage = "Authentication failed";
-      
+      let msg = "Authentication failed";
       switch (error) {
-        case 'access_denied':
-          errorMessage = "Google sign-in was cancelled";
-          break;
-        case 'redirect_uri_mismatch':
-          errorMessage = "Configuration error - please contact support";
-          break;
-        case 'session_exchange':
-          errorMessage = description || "Session creation failed";
-          break;
-        case 'missing_code':
-          errorMessage = "Authentication response incomplete";
-          break;
-        default:
-          errorMessage = description || errorMessage;
+        case "access_denied":          msg = "Google sign-in was cancelled"; break;
+        case "redirect_uri_mismatch":  msg = "Configuration error — please contact support"; break;
+        case "session_exchange":       msg = description || "Session creation failed"; break;
+        case "missing_code":           msg = "Authentication response incomplete"; break;
+        default:                       msg = description || msg;
       }
-      
-      toast.error("Google Sign-In Error", { description: errorMessage });
+      setOauthError(msg);
     }
-  }, [searchParams]);
+  }, []);
+
+  useEffect(() => {
+    if (oauthError) {
+      toast.error("Google Sign-In Error", { description: oauthError });
+    }
+  }, [oauthError]);
 
   async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -68,9 +71,8 @@ export function LoginForm() {
     toast.success("Welcome back!");
     
     // If a specific redirect was requested, honour it
-    const requestedRedirect = searchParams.get('redirect');
-    if (requestedRedirect) {
-      router.push(requestedRedirect);
+    if (redirectPath && redirectPath !== "/dashboard") {
+      router.push(redirectPath);
       router.refresh();
       return;
     }
@@ -107,8 +109,7 @@ export function LoginForm() {
     const supabase = createClient();
     
     // Include redirect URL in magic link
-    const redirectTo = searchParams.get('redirect') || '/dashboard';
-    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`;
     
     const { error } = await supabase.auth.signInWithOtp({
       email,

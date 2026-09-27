@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
   Briefcase, 
@@ -31,14 +31,20 @@ import { listAvailableTasks, type Task } from "@/lib/task-store";
 
 export function TasksPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("Any category");
   const [area, setArea] = useState("Any area");
-  // Pre-fill from the ?q= param so search bars elsewhere (dashboard header,
-  // homepage hero) can deep-link straight into a filtered task search.
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
+  // Pre-fill from the ?q= param — read via window.location (client-only)
+  // instead of useSearchParams() which crashes static prerender on Vercel.
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("q") ?? "";
+      if (q) setSearchQuery(q);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
