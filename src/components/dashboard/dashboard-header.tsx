@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { User } from "@supabase/supabase-js";
 import { useUnreadMessages } from "@/hooks/use-chat";
+import { RoleSwitcher } from "@/components/ui/role-switcher";
 
 interface DashboardHeaderProps {
   user: User | null;
@@ -80,6 +81,7 @@ export function DashboardHeader({ user, setSidebarOpen }: DashboardHeaderProps) 
               <span className="ml-2 rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">Customer</span>
             </div>
           </button>
+          <RoleSwitcher currentRole="customer" />
         </div>
       </div>
     </header>

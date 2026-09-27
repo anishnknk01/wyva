@@ -79,7 +79,11 @@ export function SectionAddress({ data, onRefresh }: Props) {
       body: JSON.stringify(addr),
     });
     setSavingAddr(false);
-    if (!res.ok) { toast.error("Save failed"); return; }
+    if (!res.ok) {
+      const json = await res.json().catch(() => null);
+      toast.error(json?.error ?? "Save failed");
+      return;
+    }
     toast.success("Address saved");
     setEditAddr(false);
     onRefresh();
@@ -93,7 +97,11 @@ export function SectionAddress({ data, onRefresh }: Props) {
       body: JSON.stringify(svc),
     });
     setSavingSvc(false);
-    if (!res.ok) { toast.error("Save failed"); return; }
+    if (!res.ok) {
+      const json = await res.json().catch(() => null);
+      toast.error(json?.error ?? "Save failed");
+      return;
+    }
     toast.success("Service location saved");
     setEditSvc(false);
     onRefresh();

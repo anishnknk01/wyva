@@ -45,7 +45,7 @@ export function SignupForm() {
       email,
       password,
       options: {
-        data: { full_name: fullName, role },
+        data: { full_name: fullName, role },  // role saved to user_metadata at signup
         emailRedirectTo: callbackUrl,
       },
     });

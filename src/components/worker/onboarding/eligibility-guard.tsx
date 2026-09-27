@@ -73,8 +73,9 @@ export function EligibilityGuard({ onEligible, children }: EligibilityGuardProps
           </div>
 
           <p className="text-sm text-gray-600 mb-2">
-            Your profile is <span className="font-semibold text-purple-600">{data?.completionScore ?? 0}% complete</span>.
-            Complete the following to apply for jobs:
+            You need to fill in the following before you can accept tasks
+            (profile is <span className="font-semibold text-purple-600">{data?.completionScore ?? 0}% complete</span> —
+            every item below is required, there&apos;s no partial-completion cutoff):
           </p>
 
           <ul className="mb-5 space-y-2">

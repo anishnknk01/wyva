@@ -140,6 +140,28 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["wysa_profiles"]["Insert"]>;
         Relationships: [];
       };
+      task_applications: {
+        Row: {
+          id: string;
+          task_id: string;
+          wysa_id: string;
+          status: "pending" | "accepted" | "rejected";
+          message: string | null;
+          proposed_at: string;
+          decided_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          wysa_id: string;
+          status?: "pending" | "accepted" | "rejected";
+          message?: string | null;
+          proposed_at?: string;
+          decided_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["task_applications"]["Insert"]>;
+        Relationships: [];
+      };
       tasks: {
         Row: {
           id: string;
@@ -169,6 +191,8 @@ export type Database = {
           dispute_submitted_at: string | null;
           photos: string[] | null;
           location_coordinates: { lat: number; lng: number } | null;
+          location_name: string | null;
+          location_address: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -200,6 +224,8 @@ export type Database = {
           dispute_submitted_at?: string | null;
           photos?: string[] | null;
           location_coordinates?: { lat: number; lng: number } | null;
+          location_name?: string | null;
+          location_address?: string | null;
           created_at?: string;
           updated_at?: string;
         };

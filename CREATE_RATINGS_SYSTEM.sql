@@ -1,3 +1,17 @@
+-- ============================================================
+-- DEAD / DO NOT RUN — conflicts with the real ratings table.
+--
+-- The actual `ratings` table already exists (created in
+-- supabase/migrations/0001_init.sql) with columns `ratee_id` + `stars`
+-- and is what src/lib/task-store.ts and the app's rating UI actually use.
+-- This file defines a DIFFERENT, incompatible shape (`rated_id`, `rating`,
+-- `rating_type`) and references columns that don't exist on tasks
+-- (`tasks.user_id`, `tasks.wysa_id`). Running this against the real
+-- database would either fail (table already exists) or, if somehow
+-- applied to a fresh database, leave you with a ratings table the rest
+-- of the app cannot read from. Kept here for historical reference only.
+-- ============================================================
+
 -- Create ratings table for task completion ratings
 CREATE TABLE IF NOT EXISTS ratings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

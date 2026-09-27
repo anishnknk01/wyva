@@ -135,8 +135,7 @@ export async function getUserConversations(): Promise<Conversation[]> {
     .rpc('get_user_conversations', { user_id: user.id });
 
   if (error) {
-    console.error("getUserConversations failed", error);
-    // Fallback query if RPC doesn't exist
+    // RPC not yet created — fallback query handles this silently
     return await getUserConversationsFallback();
   }
 

@@ -66,6 +66,12 @@ export async function PATCH(request: NextRequest) {
     if (key in body) patch[key] = body[key];
   }
 
+  // date_of_birth is a `date` column — Postgres rejects an empty string
+  // ("" is not a valid date), which previously made the whole save fail
+  // with no clear reason whenever this field was left blank. Treat "" as
+  // "not set" instead.
+  if (patch.date_of_birth === "") patch.date_of_birth = null;
+
   if (Object.keys(patch).length === 0)
     return NextResponse.json({ error: "No valid fields" }, { status: 400 });
 

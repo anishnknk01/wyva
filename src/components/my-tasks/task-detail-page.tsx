@@ -25,8 +25,9 @@ import { DisputeDialog } from "@/components/my-tasks/dispute-dialog";
 import { RateDialog } from "@/components/my-tasks/rate-dialog";
 import { ChatDialog } from "@/components/my-tasks/chat-dialog";
 import { RequestCallDialog } from "@/components/my-tasks/request-call-dialog";
-import { PhotoGallery } from "@/components/mobile/photo-gallery";
-import { SimpleMap } from "@/components/mobile/simple-map";
+import { TaskPhotoGalleryModal } from "@/components/ui/task-photo-gallery-modal";
+import { Images } from "lucide-react";
+import { TaskMap } from "@/components/ui/task-map";
 import {
   formatCurrency,
   formatDateLong,
@@ -46,6 +47,7 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
   const [rateOpen, setRateOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   const status = getEffectiveStatus(task.status, task.date, task.time);
 
@@ -132,34 +134,86 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
         Back to My Tasks
       </Link>
 
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <Badge className="h-auto gap-1.5 rounded-full bg-sun/20 px-3 py-1 text-xs font-semibold text-sun-foreground">
-            {taskStatusLabels[status]}
-          </Badge>
-          <span className="font-mono text-xs text-muted-foreground">{task.id}</span>
-        </div>
-
-        <p className="mt-3 font-heading text-lg font-semibold">{task.title}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>
-
-        {/* Photo Gallery */}
-        {task.photos && task.photos.length > 0 && (
-          <div className="mt-4">
-            <PhotoGallery photos={task.photos} maxPreview={4} />
-          </div>
-        )}
-
-        {/* Location Map */}
-        {task.locationCoordinates && (
-          <div className="mt-4">
-            <SimpleMap 
-              coordinates={task.locationCoordinates}
-              address={task.locationNote || `${task.area}, Mangalore`}
-              showDirections={true}
+      {/* ── Worker-accepted state: show ONLY the worker profile card ── */}
+      {status === "wysa_accepted" && (
+        <>
+          {acceptedWysa ? (
+            <WysaAcceptedCard
+              wysa={acceptedWysa}
+              taskId={task.id}
+              acceptedAt={task.updatedAt ?? task.createdAt}
+              onConfirm={handleConfirmWysa}
+              onChooseAnother={handleChooseAnother}
             />
-          </div>
+          ) : task.acceptedWysaId ? (
+            <div className="rounded-2xl border border-teal-200 bg-teal-50 p-5">
+              <p className="text-sm font-semibold text-teal-800 mb-3">
+                A worker has accepted your task.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" className="flex-1 rounded-full" onClick={handleChooseAnother}>
+                  Choose another
+                </Button>
+                <Button className="flex-1 rounded-full bg-teal-600 hover:bg-teal-700" onClick={handleConfirmWysa}>
+                  Confirm
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <TaskStatusBanner variant="warning">
+              Waiting for a worker to accept your task.
+            </TaskStatusBanner>
+          )}
+          {galleryOpen && task.photos && task.photos.length > 0 && (
+            <TaskPhotoGalleryModal photos={task.photos} onClose={() => setGalleryOpen(false)} />
+          )}
+          <DisputeDialog
+            open={disputeOpen}
+            onOpenChange={setDisputeOpen}
+            onSubmit={handleSubmitDispute}
+          />
+        </>
+      )}
+
+      {/* ── All other statuses: full task card + action panel ── */}
+      {status !== "wysa_accepted" && (<>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        {/* Full-bleed photo banner — edge to edge, no padding */}
+        {task.photos && task.photos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setGalleryOpen(true)}
+            className="relative block w-full overflow-hidden"
+            aria-label={`View ${task.photos.length} photo${task.photos.length > 1 ? "s" : ""}`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={task.photos[0]}
+              alt="Task photo"
+              className="w-full object-cover"
+              style={{ maxHeight: "280px" }}
+            />
+            {task.photos.length > 1 && (
+              <span className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">
+                <Images className="size-3.5" />
+                {task.photos.length} Photos — tap to view all
+              </span>
+            )}
+          </button>
         )}
+
+        {/* Card content — padded as before */}
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <Badge className="h-auto gap-1.5 rounded-full bg-sun/20 px-3 py-1 text-xs font-semibold text-sun-foreground">
+              {taskStatusLabels[status]}
+            </Badge>
+            <span className="font-mono text-xs text-muted-foreground">{task.id}</span>
+          </div>
+
+          <p className="mt-3 font-heading text-lg font-semibold">{task.title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>
 
         <dl className="mt-5 flex flex-col gap-3 text-sm">
           <div className="flex items-center justify-between gap-3">
@@ -167,7 +221,7 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
               <MapPin className="size-3.5" />
               Location
             </dt>
-            <dd className="text-right font-medium">{task.area}, Mangalore</dd>
+            <dd className="text-right font-medium">{task.locationAddress || `${task.area}, Mangalore`}</dd>
           </div>
           <div className="flex items-center justify-between gap-3">
             <dt className="flex items-center gap-1.5 text-muted-foreground">
@@ -199,6 +253,17 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
             </dd>
           </div>
         </dl>
+
+        {/* Location Map — below details so the key info is seen first */}
+        {task.locationCoordinates && (
+          <div className="mt-5">
+            <TaskMap
+              taskCoords={task.locationCoordinates}
+              address={task.locationAddress || task.locationName || task.locationNote || `${task.area}, Mangalore`}
+            />
+          </div>
+        )}
+        </div>
       </div>
 
       <div className="mt-5 flex flex-col gap-4">
@@ -207,14 +272,6 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
             Wysas nearby can now review your task and choose whether to
             accept it.
           </TaskStatusBanner>
-        )}
-
-        {status === "wysa_accepted" && acceptedWysa && (
-          <WysaAcceptedCard
-            wysa={acceptedWysa}
-            onConfirm={handleConfirmWysa}
-            onChooseAnother={handleChooseAnother}
-          />
         )}
 
         {(status === "confirmed" || status === "in_progress") && acceptedWysa && (
@@ -314,6 +371,10 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
         onOpenChange={setDisputeOpen}
         onSubmit={handleSubmitDispute}
       />
+      {galleryOpen && task.photos && task.photos.length > 0 && (
+        <TaskPhotoGalleryModal photos={task.photos} onClose={() => setGalleryOpen(false)} />
+      )}
+      </>)}
     </div>
   );
 }

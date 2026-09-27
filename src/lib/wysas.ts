@@ -853,10 +853,12 @@ export const wysas: Wysa[] = [
 export type RealWysaProfile = {
   id: string;
   name: string;
+  avatarUrl: string | null;
   area: string;
   bio: string;
   languages: string[];
   interests: string[];
+  skills: string[];
   verified: boolean;
   rating: number;
   sessionsCount: number;
@@ -865,13 +867,14 @@ export type RealWysaProfile = {
 /** Looks up a real Wysa's public profile by their auth user id. */
 export async function getWysaProfile(userId: string): Promise<RealWysaProfile | null> {
   const supabase = createClient();
-  const [{ data: wysaProfile, error: wysaError }, { data: profile }] = await Promise.all([
+  const [{ data: wysaProfile, error: wysaError }, { data: profile }, { data: workerSkills }] = await Promise.all([
     supabase
       .from("wysa_profiles")
       .select("id, area, bio, languages, interests, verified, rating, sessions_count")
       .eq("id", userId)
       .maybeSingle(),
-    supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("full_name, avatar_url").eq("id", userId).maybeSingle(),
+    supabase.from("worker_skills").select("custom_skill_name").eq("user_id", userId),
   ]);
 
   if (wysaError || !wysaProfile) return null;
@@ -882,10 +885,12 @@ export async function getWysaProfile(userId: string): Promise<RealWysaProfile | 
   return {
     id: typedWysaProfile.id,
     name: typedProfile?.full_name || "Wysa",
+    avatarUrl: (typedProfile as any)?.avatar_url ?? null,
     area: typedWysaProfile.area,
     bio: typedWysaProfile.bio,
     languages: typedWysaProfile.languages,
     interests: typedWysaProfile.interests,
+    skills: (workerSkills ?? []).map((s: any) => s.custom_skill_name).filter(Boolean),
     verified: typedWysaProfile.verified,
     rating: typedWysaProfile.rating,
     sessionsCount: typedWysaProfile.sessions_count,

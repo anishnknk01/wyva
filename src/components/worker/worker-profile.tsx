@@ -389,10 +389,14 @@ function AvatarUpload({ avatarUrl, initial, userId, onUpload }: {
     const supabase = createClient();
     const ext  = file.name.split(".").pop();
     const path = `avatars/${userId}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (error) { toast.error("Upload failed"); setBusy(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", userId);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("bucket", "avatars");
+    formData.append("path", path);
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    if (!res.ok) { toast.error("Upload failed"); setBusy(false); return; }
+    const { url } = await res.json();
+    await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
     setBusy(false);
     toast.success("Photo updated");
     onUpload();

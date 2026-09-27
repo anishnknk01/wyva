@@ -67,11 +67,18 @@ function MobileSettingsPage() {
       case 'account':
         return (
           <div className="p-4 space-y-4">
-            <Card>
+            <Card
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => router.push('/mobile/profile/edit')}
+            >
               <CardContent className="p-4">
-                <p className="text-center text-gray-600">
-                  Account settings coming soon...
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">Edit profile</p>
+                    <p className="text-sm text-gray-600">Name, photo, phone, and bio</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
               </CardContent>
             </Card>
           </div>

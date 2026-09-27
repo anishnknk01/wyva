@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "node --env-file-if-exists=.env.local scripts/check-schema.mjs || true",
     "build": "next build",
+    "prebuild": "node --env-file-if-exists=.env.local scripts/check-schema.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:schema": "node --env-file-if-exists=.env.local scripts/check-schema.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

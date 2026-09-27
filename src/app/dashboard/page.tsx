@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { useAuthGuard } from "@/lib/auth-guard";
-import { createClient } from "@/lib/supabase/client";
 
 function DashboardPage() {
   const { user, loading } = useAuthGuard();
@@ -12,24 +11,12 @@ function DashboardPage() {
 
   useEffect(() => {
     if (loading || !user) return;
-
-    (async () => {
-      const supabase = createClient();
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      // profile row missing OR role not set → stay on customer dashboard (default)
-      if (!profile) return;
-
-      const role = profile.role ?? user.user_metadata?.role;
-
-      if (role === "worker") {
-        router.replace("/worker/dashboard");
-      }
-    })();
+    // Read role from auth metadata — always available, never blocked by RLS
+    const role = user.user_metadata?.role;
+    if (role === "worker") {
+      router.replace("/worker/dashboard");
+    }
+    // null or "customer" → stay here
   }, [user, loading, router]);
 
   if (loading) {

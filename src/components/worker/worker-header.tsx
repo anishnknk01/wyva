@@ -6,6 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUnreadMessages } from "@/hooks/use-chat";
+import { RoleSwitcher } from "@/components/ui/role-switcher";
 
 type Props = { user: User | null; setSidebarOpen: (v: boolean) => void };
 
@@ -45,6 +46,7 @@ export function WorkerHeader({ user, setSidebarOpen }: Props) {
             </div>
             <span className="hidden text-sm font-medium text-gray-700 md:block">{name}</span>
           </button>
+          <RoleSwitcher currentRole="worker" />
         </div>
       </div>
     </header>

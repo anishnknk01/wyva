@@ -108,8 +108,24 @@ export default function WorkerOnboardingPage() {
       const { progress } = await progressRes.json();
 
       if (progress?.completed_at) {
-        router.replace("/worker/dashboard");
-        return;
+        // Only skip onboarding if the profile is actually complete.
+        // If completed_at is set but eligibility still shows missing items
+        // (e.g. a field was added later or got cleared), we fall through and
+        // land on the first incomplete step so the user can fix it.
+        const eligRes = await fetch("/api/worker/eligibility", { cache: "no-store" });
+        if (eligRes.ok) {
+          const elig = await eligRes.json();
+          if (elig.canApply) {
+            router.replace("/worker/dashboard");
+            return;
+          }
+          // Profile marked complete but eligibility says incomplete —
+          // fall through to resume at the first missing step below.
+        } else {
+          // Couldn't check eligibility — safe default is to show the dashboard
+          router.replace("/worker/dashboard");
+          return;
+        }
       }
 
       // Pre-fill state from existing profile data
@@ -215,13 +231,16 @@ export default function WorkerOnboardingPage() {
     if (!file || !user) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
     setUploading(true);
-    const supabase = createClient();
     const ext  = file.name.split(".").pop();
     const path = `avatars/${user.id}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (error) { toast.error("Upload failed"); setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-    setPhotoUrl(publicUrl);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("bucket", "avatars");
+    formData.append("path", path);
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    if (!res.ok) { toast.error("Upload failed"); setUploading(false); return; }
+    const { url } = await res.json();
+    setPhotoUrl(url);
     setUploading(false);
     toast.success("Photo uploaded");
   }

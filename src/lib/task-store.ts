@@ -26,6 +26,10 @@ export type Task = {
     latitude: number;
     longitude: number;
   };
+  /** Short human-readable name for the pinned location, e.g. "Kadri Park". */
+  locationName?: string;
+  /** Full formatted address returned by reverse-geocoding the exact pin. */
+  locationAddress?: string;
   date: string;
   time: string;
   durationId: string;
@@ -47,6 +51,7 @@ export type Task = {
   wysaRating: TaskRating | null;
   photos?: string[];
   createdAt: string;
+  updatedAt?: string;
 };
 
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
@@ -89,10 +94,13 @@ function rowToTask(row: TaskRow): Task {
     wysaRating: null,
     photos: row.photos || [],
     locationCoordinates: row.location_coordinates ? {
-      latitude: row.location_coordinates.lat || row.location_coordinates.latitude,
-      longitude: row.location_coordinates.lng || row.location_coordinates.longitude
+      latitude: row.location_coordinates.lat ?? (row.location_coordinates as unknown as { latitude?: number }).latitude,
+      longitude: row.location_coordinates.lng ?? (row.location_coordinates as unknown as { longitude?: number }).longitude
     } : undefined,
+    locationName: row.location_name ?? "",
+    locationAddress: row.location_address ?? "",
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -162,9 +170,8 @@ export async function saveTask(task: Omit<Task, "createdAt">): Promise<Task | nu
     }
   }
 
-  const { data, error } = await supabase
-    .from("tasks")
-    .insert({
+  function buildInsert(includeExactLocation: boolean) {
+    return {
       id: task.id,
       customer_id: task.customerId,
       title: task.title,
@@ -177,6 +184,10 @@ export async function saveTask(task: Omit<Task, "createdAt">): Promise<Task | nu
           lat: task.locationCoordinates.latitude,
           lng: task.locationCoordinates.longitude,
         }
+      } : {}),
+      ...(includeExactLocation ? {
+        location_name: task.locationName || null,
+        location_address: task.locationAddress || null,
       } : {}),
       task_date: task.date || null,
       task_time: task.time || null,
@@ -192,9 +203,33 @@ export async function saveTask(task: Omit<Task, "createdAt">): Promise<Task | nu
       interested_count: task.interestedCount,
       accepted_wysa_id: task.acceptedWysaId,
       confirmed_wysa_id: task.confirmedWysaId,
-    })
+      photos: task.photos && task.photos.length > 0 ? task.photos : null,
+    };
+  }
+
+  let { data, error } = await supabase
+    .from("tasks")
+    .insert(buildInsert(true))
     .select("*")
     .single();
+
+  // PGRST204 = "column not found in schema cache" — happens when
+  // ADD_EXACT_LOCATION_COLUMNS.sql hasn't been run against this DB yet.
+  // Retry without location_name/location_address rather than failing the
+  // whole task creation over two non-critical fields.
+  if (error?.code === "PGRST204" && /location_name|location_address/.test(error.message ?? "")) {
+    console.warn(
+      "saveTask: location_name/location_address column missing — retrying without them. " +
+      "Run ADD_EXACT_LOCATION_COLUMNS.sql in Supabase to store exact addresses."
+    );
+    const retry = await supabase
+      .from("tasks")
+      .insert(buildInsert(false))
+      .select("*")
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error || !data) {
     console.error("saveTask failed - insert error", { 
@@ -241,6 +276,9 @@ export async function updateTask(
       lng: updates.locationCoordinates.longitude,
     };
   }
+  if (updates.locationName !== undefined) patch.location_name = updates.locationName || null;
+  if (updates.locationAddress !== undefined) patch.location_address = updates.locationAddress || null;
+  if (updates.photos !== undefined) patch.photos = updates.photos.length > 0 ? updates.photos : null;
   if (updates.date !== undefined) patch.task_date = updates.date || null;
   if (updates.time !== undefined) patch.task_time = updates.time || null;
   if (updates.durationId !== undefined) patch.duration_id = updates.durationId;
@@ -501,9 +539,12 @@ export async function updateTaskStatusWithMessage(
   return updatedTask as Task;
 }
 
-// Accept a task as a Wysa
+// Accept a task as a Wysa — sets accepted_wysa_id and fires customer notification
 export async function acceptTask(taskId: string): Promise<Task | null> {
-  return await updateTaskStatusWithMessage(taskId, 'wysa_accepted');
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  return await updateTaskStatusWithMessage(taskId, 'wysa_accepted', user.id);
 }
 
 // Confirm a task (customer confirms Wysa)
@@ -519,4 +560,112 @@ export async function completeTask(taskId: string): Promise<Task | null> {
 // Release payment
 export async function releasePayment(taskId: string): Promise<Task | null> {
   return await updateTaskStatusWithMessage(taskId, 'payment_released');
+}
+
+// ── Task applications (multi-applicant booking flow) ──────────────────────
+
+export type TaskApplication = {
+  id: string;
+  taskId: string;
+  wysaId: string;
+  status: "pending" | "accepted" | "rejected";
+  message: string | null;
+  proposedAt: string;
+  decidedAt: string | null;
+};
+
+/** Submit an application from the current Wysa for a task. */
+export async function applyForTask(
+  taskId: string,
+  message?: string
+): Promise<TaskApplication | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("task_applications")
+    .insert({ task_id: taskId, wysa_id: user.id, message: message ?? null })
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("applyForTask failed", error);
+    return null;
+  }
+  return rowToApplication(data);
+}
+
+/** Load all applications for a task (customer-facing). */
+export async function loadTaskApplications(taskId: string): Promise<TaskApplication[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("task_applications")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("proposed_at", { ascending: true });
+
+  if (error || !data) return [];
+  return data.map(rowToApplication);
+}
+
+/** Check whether the current user has already applied for a task. */
+export async function getMyApplication(
+  taskId: string
+): Promise<TaskApplication | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("task_applications")
+    .select("*")
+    .eq("task_id", taskId)
+    .eq("wysa_id", user.id)
+    .maybeSingle();
+
+  return data ? rowToApplication(data) : null;
+}
+
+/**
+ * Customer accepts a specific applicant:
+ * 1. Mark this application as accepted, all others as rejected.
+ * 2. Set tasks.accepted_wysa_id + status = wysa_accepted.
+ * 3. Fire notification to the accepted Wysa.
+ */
+export async function acceptApplicant(
+  taskId: string,
+  wysaId: string
+): Promise<Task | null> {
+  const supabase = createClient();
+
+  // Reject all other pending applications
+  await supabase
+    .from("task_applications")
+    .update({ status: "rejected", decided_at: new Date().toISOString() })
+    .eq("task_id", taskId)
+    .eq("status", "pending")
+    .neq("wysa_id", wysaId);
+
+  // Accept this one
+  await supabase
+    .from("task_applications")
+    .update({ status: "accepted", decided_at: new Date().toISOString() })
+    .eq("task_id", taskId)
+    .eq("wysa_id", wysaId);
+
+  // Update the task and fire notifications
+  return updateTaskStatusWithMessage(taskId, "wysa_accepted", wysaId);
+}
+
+function rowToApplication(row: any): TaskApplication {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    wysaId: row.wysa_id,
+    status: row.status,
+    message: row.message,
+    proposedAt: row.proposed_at,
+    decidedAt: row.decided_at,
+  };
 }

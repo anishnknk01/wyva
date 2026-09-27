@@ -1,3 +1,15 @@
+-- ============================================================
+-- SUPERSEDED — do not run this file.
+--
+-- This has a real bug: `task_id UUID REFERENCES tasks(id)` below, but
+-- tasks.id is actually `text` (e.g. "TSK-12852") — running this against
+-- a real database would fail outright on that foreign key.
+--
+-- Use supabase/migrations/0002_messages_and_notifications.sql instead,
+-- which has the corrected column type and also creates
+-- notification_preferences + the get_user_conversations RPC in one pass.
+-- ============================================================
+
 -- Create messages table for chat functionality
 CREATE TABLE messages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

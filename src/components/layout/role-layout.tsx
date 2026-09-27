@@ -11,7 +11,11 @@ export function RoleLayout({ children }: { children: React.ReactNode }) {
   const role = useRoleContext(); // instant — no DB call
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  if (authLoading) {
+  // Wait for BOTH auth and role to resolve before picking a sidebar.
+  // Without this, role starts as null on first mount and null !== "worker"
+  // falls through to the Customer sidebar for a frame (or longer, on slow
+  // networks) even for workers — this was the "flips to customer" bug.
+  if (authLoading || role === null) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-500" />

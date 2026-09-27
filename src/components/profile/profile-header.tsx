@@ -36,15 +36,21 @@ export function ProfileHeader({ data, onRefresh }: Props) {
 
       const ext = file.name.split(".").pop();
       const path = `avatars/${user.id}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-
-      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bucket", "avatars");
+      formData.append("path", path);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error ?? "Upload failed");
+      }
+      const { url } = await res.json();
+      await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
       toast.success("Photo updated");
       onRefresh();
-    } catch (err: any) {
-      toast.error("Upload failed", { description: err.message });
+    } catch (err: unknown) {
+      toast.error("Upload failed", { description: err instanceof Error ? err.message : String(err) });
     }
     setUploading(false);
   }

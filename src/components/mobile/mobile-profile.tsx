@@ -176,7 +176,7 @@ export function MobileProfile() {
                 </div>
               </div>
             </div>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => router.push('/mobile/profile/edit')} aria-label="Edit profile">
               <Edit className="h-5 w-5" />
             </Button>
           </div>

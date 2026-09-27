@@ -36,7 +36,11 @@ export function SectionPersonal({ data, onRefresh }: Props) {
       body: JSON.stringify(form),
     });
     setSaving(false);
-    if (!res.ok) { toast.error("Save failed"); return; }
+    if (!res.ok) {
+      const json = await res.json().catch(() => null);
+      toast.error(json?.error ?? "Save failed");
+      return;
+    }
     toast.success("Personal info updated");
     setEditing(false);
     onRefresh();
