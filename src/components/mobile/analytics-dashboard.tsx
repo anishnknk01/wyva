@@ -69,7 +69,13 @@ export function AnalyticsDashboard() {
     const lcp = performance.getEntriesByType('largest-contentful-paint').pop()?.startTime || 0
     
     setPerformanceData({
-      memoryUsage: memoryInfo,
+      memoryUsage: memoryInfo
+        ? {
+            used: memoryInfo.usedJSHeapSize,
+            total: memoryInfo.totalJSHeapSize,
+            limit: memoryInfo.jsHeapSizeLimit,
+          }
+        : null,
       networkInfo: (navigator as any).connection || null,
       vitals: {
         fcp,
@@ -77,7 +83,10 @@ export function AnalyticsDashboard() {
         fid: 0, // Will be updated when available
         cls: 0  // Will be updated when available
       },
-      pageLoadTime: navigation?.loadEventEnd - navigation?.navigationStart || 0,
+      // Navigation Timing Level 2: loadEventEnd is already relative to the
+      // navigation start, so it doesn't need `navigationStart` subtracted
+      // (that field was removed from the modern PerformanceNavigationTiming type).
+      pageLoadTime: navigation?.loadEventEnd || 0,
       apiResponseTimes: [] // Would be populated from stored metrics
     })
   }

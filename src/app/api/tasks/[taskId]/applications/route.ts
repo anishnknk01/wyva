@@ -160,7 +160,12 @@ export async function POST(
 
     await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Server-to-server call with no browser session to forward — proves
+        // trust via the service-role secret instead. See send/route.ts.
+        "x-internal-secret": process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+      },
       body: JSON.stringify({
         userId: wysaId,
         title: "You've been accepted!",

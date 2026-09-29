@@ -48,14 +48,19 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Increment interested_count on the task so the customer sees activity
-  await supabase.rpc("increment_interested_count" as any, { task_id: taskId }).catch(() => {
+  // Increment interested_count on the task so the customer sees activity.
+  // Supabase's query builder is thenable but doesn't type `.catch()`, so
+  // await it inside a try/catch instead of chaining `.catch()` directly.
+  try {
+    const { error: rpcError } = await supabase.rpc("increment_interested_count" as any, { task_id: taskId });
+    if (rpcError) throw rpcError;
+  } catch {
     // RPC may not exist — fall back to a direct update
-    supabase
+    await supabase
       .from("tasks")
       .update({ interested_count: (task as any).interested_count + 1 })
       .eq("id", taskId);
-  });
+  }
 
   return NextResponse.json({ application: data });
 }

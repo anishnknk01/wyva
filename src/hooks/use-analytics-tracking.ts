@@ -8,7 +8,7 @@ import { useAnalytics } from '@/lib/analytics'
 export function usePageTracking() {
   const pathname = usePathname()
   const { trackPageView } = useAnalytics()
-  const previousPath = useRef<string>()
+  const previousPath = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     // Don't track initial load (already tracked by analytics manager)
@@ -24,7 +24,7 @@ export function usePageTracking() {
 // Hook for component mount/unmount tracking
 export function useComponentTracking(componentName: string, metadata?: Record<string, any>) {
   const { trackFeatureUsage } = useAnalytics()
-  const startTime = useRef<number>()
+  const startTime = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     startTime.current = Date.now()
@@ -102,7 +102,7 @@ export function useFormAnalytics(formName: string) {
 
 // Hook for search analytics
 export function useSearchAnalytics() {
-  const { trackUserAction, trackBusinessEvent } = useAnalytics()
+  const { trackUserAction, trackBusinessEvent, trackFeatureUsage } = useAnalytics()
 
   return {
     trackSearchQuery: (query: string, filters?: Record<string, any>) => {

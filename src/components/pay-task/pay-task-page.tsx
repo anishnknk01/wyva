@@ -13,15 +13,6 @@ import { TaskPaymentSecurity } from "@/components/pay-task/task-payment-security
 import { formatCurrency, type PaymentMethod } from "@/lib/tasks";
 import type { Task } from "@/lib/task-store";
 
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => {
-      open: () => void;
-      on?: (event: string, handler: (response: any) => void) => void;
-    };
-  }
-}
-
 export function PayTaskPage({ task }: { task: Task }) {
   const [method, setMethod] = useState<PaymentMethod>("upi");
   const [isPaying, setIsPaying] = useState(false);
@@ -61,27 +52,40 @@ export function PayTaskPage({ task }: { task: Task }) {
           razorpay_payment_id: string;
           razorpay_signature: string;
         }) => {
-          const verifyRes = await fetch("/api/payments/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              taskId: task.id,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-              paymentMethod: method,
-            }),
-          });
-          const verifyData = await verifyRes.json();
-          setIsPaying(false);
-          if (!verifyRes.ok) {
-            toast.error("Payment could not be verified", {
-              description: verifyData.error,
+          // Invoked by the Razorpay SDK after the outer try/catch (which
+          // only wraps razorpay.open()) has already returned — needs its
+          // own error handling, otherwise a network failure here leaves
+          // isPaying stuck true forever with no feedback after the
+          // customer has already been charged.
+          try {
+            const verifyRes = await fetch("/api/payments/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                taskId: task.id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                paymentMethod: method,
+              }),
             });
-            return;
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+              toast.error("Payment could not be verified", {
+                description: verifyData.error,
+              });
+              return;
+            }
+            toast.success("Payment secured");
+            setSecured(true);
+          } catch (err) {
+            console.error("Payment verification failed", err);
+            toast.error("Couldn't confirm your payment", {
+              description: "If money was deducted, please contact support with your task details.",
+            });
+          } finally {
+            setIsPaying(false);
           }
-          toast.success("Payment secured");
-          setSecured(true);
         },
         modal: {
           ondismiss: () => setIsPaying(false),

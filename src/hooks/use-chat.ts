@@ -99,10 +99,40 @@ export function useConversations() {
 
   useEffect(() => {
     loadConversations();
-    
-    // Refresh conversations every 30 seconds
-    const interval = setInterval(loadConversations, 30000);
-    return () => clearInterval(interval);
+
+    // Refresh conversations every 30 seconds — but only while the tab is
+    // actually visible, so backgrounded tabs don't keep polling the DB
+    // indefinitely, and refresh immediately when the tab becomes visible
+    // again rather than waiting for the next tick.
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (interval) return;
+      interval = setInterval(loadConversations, 30000);
+    };
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadConversations();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    if (document.visibilityState === 'visible') startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadConversations]);
 
   return {
@@ -127,10 +157,39 @@ export function useUnreadMessages() {
 
   useEffect(() => {
     updateUnreadCount();
-    
-    // Update every minute
-    const interval = setInterval(updateUnreadCount, 60000);
-    return () => clearInterval(interval);
+
+    // This hook is mounted persistently in the worker sidebar (present on
+    // every worker page), so pause the poll while the tab is hidden instead
+    // of hitting the DB every minute regardless of whether anyone's looking.
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (interval) return;
+      interval = setInterval(updateUnreadCount, 60000);
+    };
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        updateUnreadCount();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    if (document.visibilityState === 'visible') startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [updateUnreadCount]);
 
   return {

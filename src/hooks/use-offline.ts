@@ -119,10 +119,15 @@ export function useOffline(): OfflineCapabilities {
     if (!isOnline) return
 
     try {
-      // Trigger service worker background sync
+      // Trigger service worker background sync. The Background Sync API
+      // (registration.sync) is Chrome-only and not part of standard
+      // lib.dom.d.ts, so it's feature-detected at runtime and accessed via
+      // a locally-typed interface rather than `any`.
       if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-        const registration = await navigator.serviceWorker.ready
-        
+        const registration = (await navigator.serviceWorker.ready) as ServiceWorkerRegistration & {
+          sync: { register: (tag: string) => Promise<void> }
+        }
+
         await Promise.all([
           registration.sync.register('sync-tasks'),
           registration.sync.register('send-message'),

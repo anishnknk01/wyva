@@ -135,7 +135,10 @@ export async function getUserConversations(): Promise<Conversation[]> {
     .rpc('get_user_conversations', { user_id: user.id });
 
   if (error) {
-    // RPC not yet created — fallback query handles this silently
+    // RPC not yet created (or messages table missing) — try the fallback
+    // query. If that also fails, let the error propagate so callers can
+    // distinguish "genuinely no conversations" from "couldn't load them"
+    // instead of both looking like an empty list.
     return await getUserConversationsFallback();
   }
 
@@ -166,7 +169,10 @@ async function getUserConversationsFallback(): Promise<Conversation[]> {
 
   if (error) {
     console.error("getUserConversationsFallback failed", error);
-    return [];
+    // Genuine failure (e.g. messages table doesn't exist yet) — throw so
+    // the UI can show an error state instead of a false "no conversations"
+    // empty state.
+    throw error;
   }
 
   if (!messages) return [];

@@ -79,9 +79,16 @@ class NotificationService {
         ) as BufferSource,
       });
 
-      // Save subscription to Supabase
-      await this.saveSubscription(subscription);
-      
+      // Save subscription to Supabase — if persistence fails (e.g. the
+      // push_subscriptions table doesn't exist yet), the subscription isn't
+      // usable server-side, so treat this as a failure rather than
+      // reporting success back to the caller.
+      const saved = await this.saveSubscription(subscription);
+      if (!saved) {
+        await subscription.unsubscribe().catch(() => {});
+        return null;
+      }
+
       return subscription;
     } catch (error) {
       console.error('Push subscription failed:', error);
@@ -98,6 +105,9 @@ class NotificationService {
       const subscription = await this.registration.pushManager.getSubscription();
       if (subscription) {
         await subscription.unsubscribe();
+        // Best-effort — the browser-side unsubscribe already happened, so
+        // don't fail the whole operation if the DB row can't be removed
+        // (e.g. table doesn't exist), just log it.
         await this.removeSubscription(subscription);
       }
       return true;
@@ -190,32 +200,44 @@ class NotificationService {
     await this.showNotification(payload);
   }
 
-  private async saveSubscription(subscription: PushSubscription): Promise<void> {
+  private async saveSubscription(subscription: PushSubscription): Promise<boolean> {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) return;
+    if (!user) return false;
 
-    await supabase.from('push_subscriptions').upsert({
+    const { error } = await supabase.from('push_subscriptions').upsert({
       user_id: user.id,
       endpoint: subscription.endpoint,
       p256dh: subscription.getKey('p256dh') ? btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh') as ArrayBuffer))) : null,
       auth: subscription.getKey('auth') ? btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth') as ArrayBuffer))) : null,
       created_at: new Date().toISOString(),
     });
+
+    if (error) {
+      console.error('Failed to save push subscription:', error);
+      return false;
+    }
+    return true;
   }
 
-  private async removeSubscription(subscription: PushSubscription): Promise<void> {
+  private async removeSubscription(subscription: PushSubscription): Promise<boolean> {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) return;
+    if (!user) return false;
 
-    await supabase
+    const { error } = await supabase
       .from('push_subscriptions')
       .delete()
       .eq('user_id', user.id)
       .eq('endpoint', subscription.endpoint);
+
+    if (error) {
+      console.error('Failed to remove push subscription:', error);
+      return false;
+    }
+    return true;
   }
 
   private urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -272,6 +294,31 @@ export function useNotifications() {
     return newPermission;
   };
 
+  /**
+   * Requests OS notification permission AND confirms the push subscription
+   * was actually persisted server-side. Returns whether push notifications
+   * are genuinely usable end-to-end, not just whether the OS granted
+   * permission (those are different things — see notificationService.subscribeToPush).
+   */
+  const enablePushNotifications = async (): Promise<{ enabled: boolean; permission: NotificationPermission }> => {
+    const newPermission = await notificationService.requestPermission();
+    setPermission(newPermission);
+
+    if (newPermission !== 'granted') {
+      return { enabled: false, permission: newPermission };
+    }
+
+    // requestPermission() already calls subscribeToPush() internally when
+    // permission is granted — check whether a live subscription exists now.
+    const existing = notificationService.isSupported()
+      ? await navigator.serviceWorker.ready
+          .then((reg) => reg.pushManager.getSubscription())
+          .catch(() => null)
+      : null;
+
+    return { enabled: !!existing, permission: newPermission };
+  };
+
   const unsubscribe = async () => {
     const success = await notificationService.unsubscribe();
     if (success) {
@@ -285,6 +332,7 @@ export function useNotifications() {
     isSupported,
     isInitialized,
     requestPermission,
+    enablePushNotifications,
     unsubscribe,
     showNotification: notificationService.showNotification.bind(notificationService),
     notifyTaskUpdate: notificationService.notifyTaskUpdate.bind(notificationService),

@@ -53,7 +53,7 @@ export function MobileLayout({
   const { trackButtonClick, trackGestureUsage } = useUserBehaviorAnalytics();
 
   // Handle swipe navigation between main sections with analytics
-  const { ref: swipeRef } = useSwipeNavigation(
+  const { ref: swipeRef } = useSwipeNavigation<HTMLDivElement>(
     () => {
       // Swipe left - go to next section
       trackGestureUsage('swipe_left', 'navigation');

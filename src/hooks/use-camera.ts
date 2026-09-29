@@ -23,8 +23,9 @@ export function useCamera() {
 
   const checkSupport = useCallback(() => {
     const supported = !!(
-      navigator.mediaDevices && 
-      navigator.mediaDevices.getUserMedia &&
+      typeof navigator !== 'undefined' &&
+      navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === 'function' &&
       typeof FileReader !== 'undefined'
     );
     setIsSupported(supported);
@@ -191,7 +192,7 @@ export function useImagePicker() {
     maxHeight: number = 1080, 
     quality: number = 0.8
   ): Promise<File> => {
-    return handleAsyncError(async () => {
+    const compressed = await handleAsyncError(async () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
@@ -245,7 +246,10 @@ export function useImagePicker() {
     }, {
       title: 'Image compression failed',
       description: 'The image could not be processed'
-    }) || file;
+    });
+    // Fall back to the original, uncompressed file if compression failed —
+    // callers get a usable file either way instead of a hard failure.
+    return compressed ?? file;
   }, [handleAsyncError]);
 
   const createHiddenInput = useCallback(() => {

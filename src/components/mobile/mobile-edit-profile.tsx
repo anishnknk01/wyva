@@ -100,26 +100,35 @@ function EditProfileForm({
       return;
     }
     setUploadingPhoto(true);
-    const ext = file.name.split(".").pop();
-    const path = `avatars/${userId}.${ext}`;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("bucket", "avatars");
-    formData.append("path", path);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      toast.error(err?.error ?? "Photo upload failed");
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `avatars/${userId}.${ext}`;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bucket", "avatars");
+      formData.append("path", path);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error ?? "Photo upload failed");
+        return;
+      }
+      const { url } = await res.json();
+      const supabase = createClient();
+      const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
+      if (error) {
+        toast.error("Photo uploaded, but couldn't save it to your profile", { description: error.message });
+        return;
+      }
+      setAvatarUrl(url);
+      toast.success("Photo updated");
+      onSaved();
+    } catch (err) {
+      console.error("Photo upload failed", err);
+      toast.error("Photo upload failed", { description: "Please check your connection and try again." });
+    } finally {
       setUploadingPhoto(false);
-      return;
     }
-    const { url } = await res.json();
-    const supabase = createClient();
-    await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
-    setUploadingPhoto(false);
-    setAvatarUrl(url);
-    toast.success("Photo updated");
-    onSaved();
   }
 
   const initial = (form.full_name || email || "U").charAt(0).toUpperCase();

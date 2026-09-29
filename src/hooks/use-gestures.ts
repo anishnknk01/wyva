@@ -33,8 +33,8 @@ interface TouchPoint {
   timestamp: number
 }
 
-export function useGestures(config: GestureConfig = {}) {
-  const elementRef = useRef<HTMLElement>(null)
+export function useGestures<T extends HTMLElement = HTMLElement>(config: GestureConfig = {}) {
+  const elementRef = useRef<T>(null)
   const touchStartRef = useRef<TouchPoint | null>(null)
   const touchEndRef = useRef<TouchPoint | null>(null)
   const lastTapRef = useRef<number>(0)
@@ -270,7 +270,7 @@ export function useGestures(config: GestureConfig = {}) {
 }
 
 // Hook for pull-to-refresh functionality
-export function usePullToRefresh(onRefresh: () => Promise<void> | void) {
+export function usePullToRefresh<T extends HTMLElement = HTMLElement>(onRefresh: () => Promise<void> | void) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   
   const handlePullToRefresh = useCallback(async () => {
@@ -284,7 +284,7 @@ export function usePullToRefresh(onRefresh: () => Promise<void> | void) {
     }
   }, [onRefresh, isRefreshing])
 
-  const { ref } = useGestures({
+  const { ref } = useGestures<T>({
     onPullToRefresh: handlePullToRefresh,
     pullToRefreshThreshold: 80
   })
@@ -296,8 +296,8 @@ export function usePullToRefresh(onRefresh: () => Promise<void> | void) {
 }
 
 // Hook for swipe navigation
-export function useSwipeNavigation(onSwipeLeft?: () => void, onSwipeRight?: () => void) {
-  return useGestures({
+export function useSwipeNavigation<T extends HTMLElement = HTMLElement>(onSwipeLeft?: () => void, onSwipeRight?: () => void) {
+  return useGestures<T>({
     onSwipeLeft,
     onSwipeRight,
     swipeThreshold: 100

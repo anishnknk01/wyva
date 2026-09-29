@@ -39,7 +39,7 @@ import {
   taskStatusLabels,
   type TaskStatus,
 } from "@/lib/tasks";
-import { updateTask, acceptTask, applyForTask, getMyApplication, submitRating, type Task, type TaskApplication } from "@/lib/task-store";
+import { updateTask, acceptTask, submitRating, type Task } from "@/lib/task-store";
 import { useUser } from "@/lib/use-user";
 
 // Same category → icon mapping used when the customer posts a task, so the
@@ -132,36 +132,9 @@ export function TaskDetailPage({ task: initialTask }: { task: Task }) {
   const [dismissed, setDismissed] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [myApplication, setMyApplication] = useState<TaskApplication | null | undefined>(undefined); // undefined = loading
-  const [applying, setApplying] = useState(false);
 
   const isMine = !!user && task.acceptedWysaId === user.id;
   const status = getEffectiveStatus(task.status, task.date, task.time);
-
-  // Load the current worker's application for this task (if any) so the
-  // button can reflect their real state: Applied / Pending / Not selected.
-  useEffect(() => {
-    if (!user || task.status !== "waiting_for_wysa") { setMyApplication(null); return; }
-    let active = true;
-    getMyApplication(task.id).then(app => { if (active) setMyApplication(app); });
-    return () => { active = false; };
-  }, [user, task.id, task.status]);
-
-  async function handleApply() {
-    if (!user) {
-      toast.error("Please log in to apply for a task.");
-      return;
-    }
-    setApplying(true);
-    const app = await applyForTask(task.id);
-    setApplying(false);
-    if (app) {
-      setMyApplication(app);
-      toast.success("Application sent — the customer has been notified.");
-    } else {
-      toast.error("Couldn't apply. Please try again.");
-    }
-  }
 
   async function handleAccept() {
     if (!user) {

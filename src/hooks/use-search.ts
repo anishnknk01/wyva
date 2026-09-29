@@ -190,8 +190,12 @@ export function useSearch<T = any>(
       return
     }
 
-    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition
-    const recognition = new SpeechRecognition()
+    const SpeechRecognitionCtor = window.webkitSpeechRecognition || window.SpeechRecognition
+    if (!SpeechRecognitionCtor) {
+      console.warn('Voice search not supported')
+      return
+    }
+    const recognition = new SpeechRecognitionCtor()
     
     recognition.continuous = false
     recognition.interimResults = false

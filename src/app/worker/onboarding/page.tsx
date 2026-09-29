@@ -231,18 +231,28 @@ export default function WorkerOnboardingPage() {
     if (!file || !user) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
     setUploading(true);
-    const ext  = file.name.split(".").pop();
-    const path = `avatars/${user.id}.${ext}`;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("bucket", "avatars");
-    formData.append("path", path);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    if (!res.ok) { toast.error("Upload failed"); setUploading(false); return; }
-    const { url } = await res.json();
-    setPhotoUrl(url);
-    setUploading(false);
-    toast.success("Photo uploaded");
+    try {
+      const ext  = file.name.split(".").pop();
+      const path = `avatars/${user.id}.${ext}`;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bucket", "avatars");
+      formData.append("path", path);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        toast.error("Upload failed", { description: err?.error });
+        return;
+      }
+      const { url } = await res.json();
+      setPhotoUrl(url);
+      toast.success("Photo uploaded");
+    } catch (err) {
+      console.error("Photo upload failed", err);
+      toast.error("Upload failed", { description: "Please check your connection and try again." });
+    } finally {
+      setUploading(false);
+    }
   }
 
   // ── GPS location ──────────────────────────────────────────────────────

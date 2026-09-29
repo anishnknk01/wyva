@@ -20,13 +20,6 @@ import { taskPlatformFee, type TaskCategory, taskBudgetPresets, type PaymentMeth
 import { getCurrentPosition } from "@/lib/location-utils";
 import { useUser } from "@/lib/use-user";
 
-// Razorpay global
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
 const TOTAL_STEPS = 8;
 // Matches the server-side limit in /api/tasks/[taskId]/photos, which only
 // accepts the first 5 files per request — keeping these in sync avoids
@@ -243,27 +236,41 @@ export function TaskWizard() {
           wallet: data.paymentMethod === "wallet",
         },
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-          // Step 4: Verify payment server-side
-          const verifyRes = await fetch("/api/payments/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              taskId,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-              paymentMethod: data.paymentMethod,
-            }),
-          });
-          const verifyData = await verifyRes.json();
-          setSubmitting(false);
-          if (!verifyRes.ok) {
-            toast.error("Payment could not be verified", { description: verifyData.error });
-            return;
+          // This callback is invoked by the Razorpay SDK itself, well after
+          // the outer try/catch (which only wraps razorpay.open()) has
+          // already returned — so it needs its own error handling. Without
+          // this, a network failure here (after the customer has already
+          // been charged) would leave `submitting` stuck true forever with
+          // no feedback at all.
+          try {
+            // Step 4: Verify payment server-side
+            const verifyRes = await fetch("/api/payments/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                taskId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                paymentMethod: data.paymentMethod,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+              toast.error("Payment could not be verified", { description: verifyData.error });
+              return;
+            }
+            // Payment confirmed — redirect to task posted page
+            toast.success("Payment confirmed! Your task is now live.");
+            router.replace(`/task-posted/${taskId}`);
+          } catch (err) {
+            console.error("Payment verification failed", err);
+            toast.error("Couldn't confirm your payment", {
+              description: "If money was deducted, please contact support with your task details.",
+            });
+          } finally {
+            setSubmitting(false);
           }
-          // Payment confirmed — redirect to task posted page
-          toast.success("Payment confirmed! Your task is now live.");
-          router.replace(`/task-posted/${taskId}`);
         },
         modal: { ondismiss: () => setSubmitting(false) },
       });

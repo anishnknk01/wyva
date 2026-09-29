@@ -6,14 +6,6 @@ const nextConfig: NextConfig = {
   },
   // Compress responses
   compress: true,
-  // Suppress TypeScript and ESLint errors during build so they never block
-  // Vercel deployments — real errors surface in the IDE and CI type-check.
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   // Reduce image optimisation overhead during dev
   images: {
     formats: ["image/avif", "image/webp"],

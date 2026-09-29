@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
-import { createClient } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 // Configure web-push
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -25,6 +26,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Require either a real logged-in session (browser-originated calls,
+    // e.g. from message-store.ts after the user sends a message) or a
+    // trusted internal server-to-server call (e.g. the applications route
+    // notifying an accepted Wysa). Without this, anyone who found this
+    // endpoint could spam an arbitrary `userId` with fabricated notifications.
+    const internalSecret = request.headers.get('x-internal-secret');
+    const isTrustedInternalCall =
+      !!process.env.SUPABASE_SERVICE_ROLE_KEY && internalSecret === process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!isTrustedInternalCall) {
+      const sessionClient = await createServerClient();
+      const { data: { user: caller } } = await sessionClient.auth.getUser();
+      if (!caller) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     const { userId, title, body, data, tag } = await request.json();
 
     if (!userId || !title || !body) {
@@ -34,7 +52,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    // Service-role client: this route looks up another user's subscriptions
+    // by id on behalf of internal server/client code (not the target user's
+    // own session), so it must bypass RLS deliberately rather than using
+    // the anon browser client (which — with no session here — would have
+    // auth.uid() = null and silently match zero rows under the
+    // "user_id = auth.uid()" policies on these tables).
+    const supabase = createAdminClient();
 
     // Get user's push subscriptions
     const { data: subscriptions, error: subsError } = await supabase

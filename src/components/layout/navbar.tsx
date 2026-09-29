@@ -85,17 +85,14 @@ export function Navbar() {
           )}        </div>
 
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger
-            className="lg:hidden"
-            render={
-              <Button
-                variant="outline"
-                size="icon-lg"
-                aria-label="Open menu"
-              />
-            }
-          >
-            <Menu className="size-5" />
+          <SheetTrigger asChild className="lg:hidden">
+            <Button
+              variant="outline"
+              size="icon-lg"
+              aria-label="Open menu"
+            >
+              <Menu className="size-5" />
+            </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-72">
             <SheetHeader>
@@ -106,24 +103,23 @@ export function Navbar() {
             </SheetHeader>
             <div className="flex flex-col gap-1 px-4">
               {user && (
-                <SheetClose
-                  render={<Link href="/dashboard" />}
-                  onClick={() => setOpen(false)}
-                >
-                  <span className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted">
+                <SheetClose asChild onClick={() => setOpen(false)}>
+                  <Link
+                    href="/dashboard"
+                    className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  >
                     Dashboard
-                  </span>
+                  </Link>
                 </SheetClose>
               )}
               {navLinks.map((link) => (
-                <SheetClose
-                  key={link.href}
-                  render={<Link href={link.href} />}
-                  onClick={() => setOpen(false)}
-                >
-                  <span className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted">
+                <SheetClose key={link.href} asChild onClick={() => setOpen(false)}>
+                  <Link
+                    href={link.href}
+                    className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  >
                     {link.label}
-                  </span>
+                  </Link>
                 </SheetClose>
               ))}
               <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
@@ -135,23 +131,23 @@ export function Navbar() {
                     </Button>
                   </form>
                 ) : (
-                  <SheetClose
-                    render={<Link href="/login" />}
-                    onClick={() => setOpen(false)}
-                  >
-                    <span className="flex h-9 w-full items-center justify-center rounded-lg border border-border text-sm font-medium">
+                  <SheetClose asChild onClick={() => setOpen(false)}>
+                    <Link
+                      href="/login"
+                      className="flex h-9 w-full items-center justify-center rounded-lg border border-border text-sm font-medium"
+                    >
                       Login
-                    </span>
+                    </Link>
                   </SheetClose>
                 )}
                 {role !== "worker" && (
-                  <SheetClose
-                    render={<Link href="/create-task" />}
-                    onClick={() => setOpen(false)}
-                  >
-                    <span className="flex h-9 w-full items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground">
+                  <SheetClose asChild onClick={() => setOpen(false)}>
+                    <Link
+                      href="/create-task"
+                      className="flex h-9 w-full items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground"
+                    >
                       Post a Task
-                    </span>
+                    </Link>
                   </SheetClose>
                 )}
               </div>

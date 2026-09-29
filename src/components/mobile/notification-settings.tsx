@@ -35,12 +35,13 @@ export function NotificationSettings() {
     permission,
     isSupported,
     isInitialized,
-    requestPermission,
+    enablePushNotifications,
     unsubscribe,
   } = useNotifications();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [persistenceUnavailable, setPersistenceUnavailable] = useState(false);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     task_updates: true,
     new_messages: true,
@@ -68,7 +69,10 @@ export function NotificationSettings() {
         .single();
 
       if (error?.code === 'PGRST205') {
-        // Table doesn't exist yet — use in-memory defaults silently.
+        // Table doesn't exist yet — fall back to in-memory defaults, but
+        // surface that changes won't actually persist rather than staying
+        // fully silent about it.
+        setPersistenceUnavailable(true);
         setLoading(false);
         return;
       }
@@ -132,7 +136,8 @@ export function NotificationSettings() {
           .eq('user_id', user.id);
 
         if (error?.code === 'PGRST205') {
-          // Table doesn't exist yet — apply change in-memory only, no error
+          // Table doesn't exist yet — apply change in-memory only.
+          setPersistenceUnavailable(true);
         } else if (error) {
           console.warn('Could not save notification preferences:', error.message);
         } else {
@@ -158,11 +163,16 @@ export function NotificationSettings() {
       await savePreferences({ push_notifications: false });
       toast.success('Push notifications disabled');
     } else {
-      // Request permission and enable
-      const newPermission = await requestPermission();
-      if (newPermission === 'granted') {
+      // Request OS permission AND confirm the subscription was actually
+      // persisted — the OS can grant permission while the Supabase write
+      // still fails (e.g. push_subscriptions table missing), and we don't
+      // want to tell the user push is on when it isn't.
+      const { enabled, permission: newPermission } = await enablePushNotifications();
+      if (enabled) {
         await savePreferences({ push_notifications: true });
         toast.success('Push notifications enabled');
+      } else if (newPermission === 'granted') {
+        toast.error("Notifications were allowed, but we couldn't finish setting them up. Please try again.");
       } else {
         toast.error('Push notification permission denied');
       }
@@ -190,6 +200,11 @@ export function NotificationSettings() {
 
   return (
     <div className="space-y-6 p-4">
+      {persistenceUnavailable && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Your preferences will apply for this session but can&apos;t be saved to your account right now. Changes may not persist next time you visit.
+        </div>
+      )}
       {/* Push Notifications */}
       <Card>
         <CardHeader>

@@ -52,7 +52,22 @@ export async function POST(request: Request) {
       notes: { taskId: task.id },
     });
 
-    await admin.from("tasks").update({ razorpay_order_id: order.id }).eq("id", task.id);
+    const { error: updateError } = await admin
+      .from("tasks")
+      .update({ razorpay_order_id: order.id })
+      .eq("id", task.id);
+
+    if (updateError) {
+      // If this doesn't persist, /api/payments/verify's order-id match
+      // check will fail later — even though Razorpay already created a
+      // valid order. Fail now, before the customer is charged, rather than
+      // letting them pay for an order that verify can never confirm.
+      console.error("Failed to persist razorpay_order_id on task", task.id, updateError);
+      return NextResponse.json(
+        { error: "Could not start payment. Please try again." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       orderId: order.id,

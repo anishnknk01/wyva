@@ -386,20 +386,34 @@ function AvatarUpload({ avatarUrl, initial, userId, onUpload }: {
     if (!file || !userId) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
     setBusy(true);
-    const supabase = createClient();
-    const ext  = file.name.split(".").pop();
-    const path = `avatars/${userId}.${ext}`;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("bucket", "avatars");
-    formData.append("path", path);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    if (!res.ok) { toast.error("Upload failed"); setBusy(false); return; }
-    const { url } = await res.json();
-    await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
-    setBusy(false);
-    toast.success("Photo updated");
-    onUpload();
+    try {
+      const supabase = createClient();
+      const ext  = file.name.split(".").pop();
+      const path = `avatars/${userId}.${ext}`;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bucket", "avatars");
+      formData.append("path", path);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        toast.error("Upload failed", { description: err?.error });
+        return;
+      }
+      const { url } = await res.json();
+      const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
+      if (error) {
+        toast.error("Photo uploaded, but couldn't save it to your profile", { description: error.message });
+        return;
+      }
+      toast.success("Photo updated");
+      onUpload();
+    } catch (err) {
+      console.error("Avatar upload failed", err);
+      toast.error("Upload failed", { description: "Please check your connection and try again." });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

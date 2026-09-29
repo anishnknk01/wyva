@@ -77,23 +77,31 @@ export function LoginForm() {
       return;
     }
 
-    // Otherwise route by role
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      const role = profile?.role ?? user.user_metadata?.role;
-      if (role === "worker") {
-        // Worker dashboard will gate to onboarding if not yet complete
-        router.push("/worker/dashboard");
+    // Otherwise route by role. The user is already logged in at this point
+    // (signInWithPassword above succeeded) — if this lookup throws (network
+    // blip), fall back to the customer dashboard rather than leaving the
+    // user stranded on the login page after a "Welcome back!" toast.
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        const role = profile?.role ?? user.user_metadata?.role;
+        if (role === "worker") {
+          // Worker dashboard will gate to onboarding if not yet complete
+          router.push("/worker/dashboard");
+        } else {
+          // customer or no role → customer dashboard
+          router.push("/dashboard");
+        }
       } else {
-        // customer or no role → customer dashboard
         router.push("/dashboard");
       }
-    } else {
+    } catch (err) {
+      console.error("Post-login role lookup failed", err);
       router.push("/dashboard");
     }
     router.refresh();

@@ -188,7 +188,7 @@ export function AnalyticsForm({ formName, onSubmit, children, ...props }: Analyt
     analytics.trackFeatureUsage(formName, 'form_viewed')
   }, [formName])
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit: React.SubmitEventHandler<HTMLFormElement> = (e) => {
     analytics.trackUserAction('form_submit', formName)
     onSubmit?.(e)
   }
@@ -207,7 +207,7 @@ interface PerformanceBoundaryProps {
 }
 
 export function PerformanceBoundary({ name, children }: PerformanceBoundaryProps) {
-  const renderStart = React.useRef<number>()
+  const renderStart = React.useRef<number | undefined>(undefined)
 
   useEffect(() => {
     renderStart.current = performance.now()

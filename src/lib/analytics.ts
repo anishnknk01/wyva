@@ -117,10 +117,13 @@ class AnalyticsManager {
         const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
         
         if (navigation) {
-          this.trackMetric('page_load_time', navigation.loadEventEnd - navigation.navigationStart, 'ms')
-          this.trackMetric('dom_content_loaded', navigation.domContentLoadedEventEnd - navigation.navigationStart, 'ms')
-          this.trackMetric('first_byte', navigation.responseStart - navigation.navigationStart, 'ms')
-          this.trackMetric('dom_interactive', navigation.domInteractive - navigation.navigationStart, 'ms')
+          // Navigation Timing Level 2: all these marks are already relative
+          // to the navigation start (entry.startTime, which is 0 for the
+          // navigation entry itself) — no need to subtract a start time.
+          this.trackMetric('page_load_time', navigation.loadEventEnd, 'ms')
+          this.trackMetric('dom_content_loaded', navigation.domContentLoadedEventEnd, 'ms')
+          this.trackMetric('first_byte', navigation.responseStart, 'ms')
+          this.trackMetric('dom_interactive', navigation.domInteractive, 'ms')
         }
       }, 0)
     })
@@ -165,7 +168,8 @@ class AnalyticsManager {
       const observer = new PerformanceObserver((list) => {
         list.getEntries().forEach((entry) => {
           if (entry.name === 'first-input') {
-            const fid = entry.processingStart - entry.startTime
+            const eventEntry = entry as PerformanceEventTiming
+            const fid = eventEntry.processingStart - eventEntry.startTime
             this.trackMetric('first_input_delay', fid, 'ms')
           }
         })

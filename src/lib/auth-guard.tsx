@@ -15,13 +15,23 @@ export function useAuthGuard(redirectTo: string = '/login') {
 
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
 
-      // If no user and not loading, redirect to login
-      if (!session?.user) {
+        // If no user and not loading, redirect to login
+        if (!session?.user) {
+          router.push(`${redirectTo}?redirect=${encodeURIComponent(window.location.pathname)}`);
+        }
+      } catch (error) {
+        // Without this catch, a rejected getSession() (corrupted local
+        // storage, etc.) would leave `loading` true forever and strand the
+        // user on the spinner with no way forward except a hard refresh.
+        console.error('Failed to load session:', error);
+        setUser(null);
         router.push(`${redirectTo}?redirect=${encodeURIComponent(window.location.pathname)}`);
+      } finally {
+        setLoading(false);
       }
     };
 

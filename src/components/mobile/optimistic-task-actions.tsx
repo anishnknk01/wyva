@@ -78,10 +78,10 @@ export function OptimisticTaskActions({
   )
 
   const { execute: executeStatusUpdate, isPending: statusPending } = useOptimisticAction(
-    async (newStatus: string) => {
+    async (newStatus: Task["status"]) => {
       // Optimistically update local state
       const previousStatus = localTask.status
-      setLocalTask(prev => ({ ...prev, status: newStatus as any }))
+      setLocalTask(prev => ({ ...prev, status: newStatus }))
       
       // Perform actual API call
       await onTaskUpdate(task.id, { status: newStatus })
@@ -104,7 +104,7 @@ export function OptimisticTaskActions({
     executeFavorite(!isFavorited)
   }
 
-  const handleStatusUpdate = (status: string) => {
+  const handleStatusUpdate = (status: Task["status"]) => {
     executeStatusUpdate(status)
   }
 

@@ -21,15 +21,6 @@ import { toast } from 'sonner';
 import { useErrorHandler } from '@/hooks/use-error-handler';
 import { LoadingPage, LoadingSpinner } from '@/components/ui/loading-spinner';
 
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => {
-      open: () => void;
-      on?: (event: string, handler: (response: any) => void) => void;
-    };
-  }
-}
-
 interface MobilePayTaskProps {
   taskId: string;
 }

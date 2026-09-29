@@ -84,22 +84,23 @@ export function MobileProfile() {
       setUser(user);
 
       if (user) {
-        // Load user profile with ratings
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('average_rating, total_ratings')
-          .eq('id', user.id)
-          .single();
-        
-        if (profileData) {
-          setProfile(profileData);
-        }
+        // These three loads are independent of each other — run them
+        // concurrently instead of one after another to avoid ~3 avoidable
+        // round trips of serial latency on every profile page visit.
+        const [profileResult, userTasks, userEarnings] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('average_rating, total_ratings')
+            .eq('id', user.id)
+            .single(),
+          listAllTasksForCustomer(user.id),
+          calculateWysaEarnings(user.id),
+        ]);
 
-        const userTasks = await listAllTasksForCustomer(user.id);
+        if (profileResult.data) {
+          setProfile(profileResult.data);
+        }
         setTasks(userTasks);
-        
-        // Calculate earnings if user is a Wysa
-        const userEarnings = await calculateWysaEarnings(user.id);
         setEarnings(userEarnings);
       }
       

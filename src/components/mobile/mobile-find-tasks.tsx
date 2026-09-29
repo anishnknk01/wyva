@@ -31,8 +31,6 @@ import { PullToRefresh } from '@/components/mobile/pull-to-refresh';
 import { SwipeableCard, taskCardActions } from '@/components/mobile/swipeable-card';
 import { TouchFeedback } from '@/components/mobile/touch-feedback';
 import { AdvancedSearch } from '@/components/mobile/advanced-search';
-import { useSearch } from '@/hooks/use-search';
-import type { SearchFilters } from '@/hooks/use-search';
 import { useLocation } from '@/hooks/use-location';
 import { calculateDistance, formatDistance, isValidCoordinates } from '@/lib/location-utils';
 import { toast } from 'sonner';
@@ -48,23 +46,49 @@ export function MobileFindTasks() {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   
   const [searchQuery, setSearchQuery] = useState("");
-  
-  const { 
-    searchResults, 
-    isSearching, 
-    suggestions, 
-    startVoiceSearch,
-    isVoiceSearchActive,
-    facets 
-  } = useSearch({
-    query: searchQuery,
-    filters: {
-      categories: activeFilters.filter(f => f.startsWith("category:")).map(f => f.replace("category:", "")),
-      location: activeFilters.find(f => f.startsWith("location:"))?.replace("location:", ""),
-      budget: activeFilters.find(f => f.startsWith("budget:"))?.replace("budget:", ""),
-      duration: activeFilters.find(f => f.startsWith("duration:"))?.replace("duration:", ""),
+  const [isVoiceSearchActive, setIsVoiceSearchActive] = useState(false);
+
+  // Local, client-side filtering of the already-loaded `tasks` list — this
+  // screen doesn't hit a server search endpoint, it filters what's already
+  // in memory by query text + the active category/location/budget chips.
+  const searchResults = useMemo(() => {
+    let list = tasks;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (t) =>
+          t.title?.toLowerCase().includes(q) ||
+          t.description?.toLowerCase().includes(q) ||
+          t.category?.toLowerCase().includes(q)
+      );
     }
-  });
+
+    const categoryFilters = activeFilters
+      .filter((f) => f.startsWith("category:"))
+      .map((f) => f.replace("category:", ""));
+    if (categoryFilters.length > 0) {
+      list = list.filter((t) => categoryFilters.includes(t.category));
+    }
+
+    const locationFilter = activeFilters.find((f) => f.startsWith("location:"))?.replace("location:", "");
+    if (locationFilter) {
+      list = list.filter((t) => t.area === locationFilter);
+    }
+
+    return list;
+  }, [tasks, searchQuery, activeFilters]);
+
+  const isSearching = false;
+
+  const suggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.trim().toLowerCase();
+    const fromCategories = taskCategories.filter((label) => label.toLowerCase().includes(q));
+    return [...new Set(fromCategories)].slice(0, 5);
+  }, [searchQuery]);
+
+  const facets = undefined;
 
   const handleFilterAdd = (filter: string) => {
     if (!activeFilters.includes(filter)) {
@@ -77,9 +101,27 @@ export function MobileFindTasks() {
   };
 
   const handleVoiceSearch = () => {
-    startVoiceSearch((transcript) => {
+    const SpeechRecognitionCtor =
+      (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      toast.error("Voice search isn't supported on this device.");
+      return;
+    }
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => setIsVoiceSearchActive(true);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
       setSearchQuery(transcript);
-    });
+    };
+    recognition.onerror = () => setIsVoiceSearchActive(false);
+    recognition.onend = () => setIsVoiceSearchActive(false);
+
+    recognition.start();
   };
 
   const handleRefresh = async () => {
@@ -103,8 +145,7 @@ export function MobileFindTasks() {
     setRefreshing(false);
   };
 
-  // Use search results when available, otherwise show all tasks
-  const filteredTasks = searchQuery || activeFilters.length > 0 ? searchResults : tasks;
+  const filteredTasks = searchResults;
 
   // Load initial tasks on mount
   useEffect(() => {
