@@ -19,21 +19,24 @@ export function DashboardHeader({ user, setSidebarOpen }: DashboardHeaderProps) 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
+    <header className="bg-white border-b border-gray-200 px-3 py-3 sm:px-6 sm:py-4">
+      <div className="flex items-center justify-between gap-2">
         {/* Left side - Mobile menu button and search */}
-        <div className="flex items-center flex-1 max-w-2xl">
+        <div className="flex min-w-0 flex-1 items-center sm:max-w-2xl">
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden mr-3"
+            className="lg:hidden mr-2 shrink-0 sm:mr-3"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="h-5 w-5" />
           </Button>
           
+          {/* Search bar hidden on small screens — there's a dedicated tasks
+              page, and this form plus the role switcher + bell + profile
+              was overflowing off the right edge of the viewport on mobile. */}
           <form
-            className="relative flex-1 max-w-md"
+            className="relative hidden max-w-md flex-1 sm:block"
             onSubmit={(e) => {
               e.preventDefault();
               const query = (e.currentTarget.elements.namedItem("q") as HTMLInputElement)?.value;
@@ -50,11 +53,11 @@ export function DashboardHeader({ user, setSidebarOpen }: DashboardHeaderProps) 
         </div>
 
         {/* Right side - Notifications and profile */}
-        <div className="flex items-center space-x-4">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
+            className="relative shrink-0"
             onClick={() => router.push("/messages")}
             aria-label="Messages"
           >
@@ -68,7 +71,7 @@ export function DashboardHeader({ user, setSidebarOpen }: DashboardHeaderProps) 
 
           <button
             onClick={() => router.push("/profile")}
-            className="flex items-center space-x-3"
+            className="flex shrink-0 items-center space-x-3"
           >
             <div className="h-8 w-8 bg-teal-600 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-medium">

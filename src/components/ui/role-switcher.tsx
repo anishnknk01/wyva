@@ -66,7 +66,7 @@ export function RoleSwitcher({ currentRole }: RoleSwitcherProps) {
         disabled={isSwitching}
         aria-pressed={currentRole === "customer"}
         title="Switch to Customer account"
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 ${
+        className={`flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 sm:px-3 ${
           currentRole === "customer"
             ? "bg-teal-100 text-teal-700 shadow-sm"
             : "text-gray-500 hover:bg-gray-100"
@@ -77,7 +77,9 @@ export function RoleSwitcher({ currentRole }: RoleSwitcherProps) {
         ) : (
           <ShoppingBag className="h-3.5 w-3.5" />
         )}
-        Customer
+        {/* Labels only show once there's room — icon-only below sm avoids
+            this pill forcing the header to overflow on mobile. */}
+        <span className="hidden sm:inline">Customer</span>
       </button>
       <button
         type="button"
@@ -85,7 +87,7 @@ export function RoleSwitcher({ currentRole }: RoleSwitcherProps) {
         disabled={isSwitching}
         aria-pressed={currentRole === "worker"}
         title="Switch to Worker account"
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 ${
+        className={`flex items-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 sm:px-3 ${
           currentRole === "worker"
             ? "bg-purple-100 text-purple-700 shadow-sm"
             : "text-gray-500 hover:bg-gray-100"
@@ -96,7 +98,7 @@ export function RoleSwitcher({ currentRole }: RoleSwitcherProps) {
         ) : (
           <Briefcase className="h-3.5 w-3.5" />
         )}
-        Worker
+        <span className="hidden sm:inline">Worker</span>
       </button>
     </div>
   );

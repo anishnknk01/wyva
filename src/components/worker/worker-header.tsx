@@ -16,14 +16,18 @@ export function WorkerHeader({ user, setSidebarOpen }: Props) {
   const name = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Worker";
 
   return (
-    <header className="border-b border-gray-200 bg-white px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-1 items-center gap-3 max-w-lg">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+    <header className="border-b border-gray-200 bg-white px-3 py-3 sm:px-6 sm:py-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:max-w-lg">
+          <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
+          {/* Search bar hidden on small screens — there's a dedicated Find
+              Tasks page, and cramming a text input alongside the role
+              switcher + bell + avatar caused everything to overflow off
+              the right edge of the viewport on mobile. */}
           <form
-            className="relative flex-1"
+            className="relative hidden flex-1 sm:block"
             onSubmit={e => { e.preventDefault(); const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement)?.value; router.push(q ? `/worker/find-tasks?q=${encodeURIComponent(q)}` : "/worker/find-tasks"); }}
           >
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -31,8 +35,8 @@ export function WorkerHeader({ user, setSidebarOpen }: Props) {
           </form>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative" onClick={() => router.push("/messages")}>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          <Button variant="ghost" size="icon" className="relative shrink-0" onClick={() => router.push("/messages")}>
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
               <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
@@ -40,7 +44,7 @@ export function WorkerHeader({ user, setSidebarOpen }: Props) {
               </span>
             )}
           </Button>
-          <button onClick={() => router.push("/profile")} className="flex items-center gap-2">
+          <button onClick={() => router.push("/profile")} className="flex shrink-0 items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white">
               {name.charAt(0).toUpperCase()}
             </div>
