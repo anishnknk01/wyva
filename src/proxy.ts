@@ -3,6 +3,19 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+  const pathname = request.nextUrl.pathname;
+
+  // Never gate the OAuth/email callback route through this session check.
+  // It needs to run before a session exists yet (that's the whole point of
+  // the callback — it's what *creates* the session), and this middleware
+  // runs on every request including this one. If auth.getUser() below ever
+  // throws (timeout, transient network error) while handling the callback,
+  // an uncaught error here kills the response before the route handler
+  // gets a chance to run, which presents to the browser as a broken/reset
+  // connection rather than a normal error page.
+  if (pathname === "/auth/callback") {
+    return supabaseResponse;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,10 +38,17 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Refresh session cookie on every request
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
+  // Refresh session cookie on every request. Wrapped in try/catch — a
+  // transient failure here (Supabase timeout/network blip) should degrade
+  // to "treat as logged out for this request" rather than throwing
+  // uncaught through the middleware and killing the connection outright.
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch (error) {
+    console.error("proxy: auth.getUser() failed", error);
+  }
 
   // ── 1. Gate protected routes — redirect to login if unauthenticated ────
   const protectedPaths = [
