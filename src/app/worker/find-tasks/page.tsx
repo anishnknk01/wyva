@@ -27,7 +27,7 @@ function WorkerFindTasksPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <div className="w-64 shrink-0"><WorkerSidebar /></div>
+      <WorkerSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-1 flex-col min-w-0">
         <WorkerHeader user={user} setSidebarOpen={setSidebarOpen} />
         <main className="flex-1 overflow-y-auto p-6">

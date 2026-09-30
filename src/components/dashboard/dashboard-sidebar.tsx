@@ -10,13 +10,17 @@ import {
   Bookmark, 
   CreditCard, 
   User, 
-  Settings
+  Settings,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUnreadMessages } from "@/hooks/use-chat";
 import { useRole } from "@/hooks/use-role";
 
 interface DashboardSidebarProps {
+  // Only meaningful below the lg breakpoint — controls whether the sidebar
+  // is shown as an overlay drawer. Ignored on desktop, where the sidebar is
+  // always visible in its own column.
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 }
@@ -36,16 +40,25 @@ export function DashboardSidebar({ sidebarOpen, setSidebarOpen }: DashboardSideb
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
   const role = useRole();
+  const onClose = () => setSidebarOpen(false);
 
-  return (
+  const content = (
     <div className="h-full bg-white border-r border-gray-200 flex flex-col">
       {/* Logo Section — matches main site navbar wordmark */}
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-6 border-b border-gray-100 flex items-center justify-between">
         <Link href="/" className="flex items-center">
           <span className="font-heading text-2xl font-extrabold tracking-tight text-gray-900">
             wysa<span className="text-teal-600">.</span>
           </span>
         </Link>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-600 lg:hidden"
+          aria-label="Close menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -60,6 +73,7 @@ export function DashboardSidebar({ sidebarOpen, setSidebarOpen }: DashboardSideb
               <li key={item.name}>
                 <Link
                   href={item.href}
+                  onClick={onClose}
                   className={`
                     group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-150
                     ${isActive 
@@ -97,7 +111,7 @@ export function DashboardSidebar({ sidebarOpen, setSidebarOpen }: DashboardSideb
             <Button
               size="sm"
               className="w-full bg-white text-teal-600 hover:bg-gray-50 font-medium"
-              render={<Link href="/create-task" />}
+              render={<Link href="/create-task" onClick={onClose} />}
             >
               Post a Task
             </Button>
@@ -105,5 +119,27 @@ export function DashboardSidebar({ sidebarOpen, setSidebarOpen }: DashboardSideb
         </div>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop: sidebar sits in its own column, always visible */}
+      <div className="hidden h-full w-64 shrink-0 lg:block">{content}</div>
+
+      {/* Mobile: off-canvas drawer + backdrop, only mounted when open so it
+          never intercepts clicks/layout space while closed. */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={onClose}
+            aria-hidden="true"
+          />
+          <div className="absolute inset-y-0 left-0 w-64 max-w-[80vw] shadow-xl">
+            {content}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

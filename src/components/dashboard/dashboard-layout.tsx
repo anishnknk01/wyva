@@ -19,13 +19,10 @@ export function DashboardLayout() {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Sidebar - Fixed width like in the image */}
-      <div className="w-64 flex-shrink-0">
-        <DashboardSidebar 
-          sidebarOpen={sidebarOpen} 
-          setSidebarOpen={setSidebarOpen} 
-        />
-      </div>
+      <DashboardSidebar 
+        sidebarOpen={sidebarOpen} 
+        setSidebarOpen={setSidebarOpen} 
+      />
       
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
