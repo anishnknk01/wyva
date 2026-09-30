@@ -159,6 +159,17 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.startsWith('chrome-extension://')) {
     return;
   }
+
+  // Never intercept the OAuth/email auth callback. Supabase's PKCE code
+  // exchange is single-use — if the service worker's fetch handling here
+  // causes the request to be issued more than once (or replayed from
+  // cache), the second attempt fails with
+  // "flow_state_already_used"/"State has already been used" and the user
+  // gets bounced back to the site with an error instead of being logged
+  // in. This route must always go straight to the network, untouched.
+  if (event.request.url.includes('/auth/callback')) {
+    return;
+  }
   
   event.respondWith(handleFetchWithStrategy(event.request));
 });
