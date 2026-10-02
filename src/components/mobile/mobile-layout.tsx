@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MobileErrorBoundary } from './error-boundary';
 import { NetworkStatus } from './network-status';
@@ -42,6 +42,7 @@ export function MobileLayout({
 }: MobileLayoutProps) {
   const pathname = usePathname();
   const { trackButtonClick, trackGestureUsage } = useUserBehaviorAnalytics();
+  const [navOpen, setNavOpen] = useState(false);
 
   // Handle swipe navigation between main sections with analytics
   const { ref: swipeRef } = useSwipeNavigation<HTMLDivElement>(
@@ -92,59 +93,68 @@ export function MobileLayout({
 
   return (
     <AnalyticsProvider>
-      <div ref={swipeRef} className="flex h-screen bg-white">
-        {/* Left navigation rail — fixed, collapsed by default (~64px),
-            expands into an overlay drawer on tap. Replaces the old bottom
-            nav bar entirely. Rendered unconditionally (not gated by
-            showBottomNav) since it's now the only navigation surface this
-            layout offers; showBottomNav is kept as a prop for backward
-            compatibility with existing callers but no longer changes
-            anything structural. */}
+      <div ref={swipeRef} className="flex h-screen flex-col bg-white">
+        <NetworkStatus />
+
+        {/* Top Header — the hamburger button here is the ONLY way to open
+            the nav drawer. There's no permanently-visible rail anymore:
+            the drawer (MobileNavRail) is unmounted entirely while closed,
+            so content always gets the full viewport width. */}
+        <header className="flex items-center gap-1 border-b border-gray-200 bg-white px-2 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          {showBottomNav && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Open navigation menu"
+              onClick={() => {
+                trackButtonClick('open_nav', pathname);
+                setNavOpen(true);
+              }}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+          {showBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                trackButtonClick('back', pathname);
+                onBack?.();
+              }}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          <h1 className="px-2 text-lg font-semibold text-gray-900">
+            {title || 'Wysa'}
+          </h1>
+        </header>
+
+        {/* Main Content with Error Boundary and Loading Provider — always
+            full width, never offset for the drawer. */}
+        <main className="flex-1 overflow-y-auto">
+          {/* Offline Status Banner */}
+          <div className="sticky top-0 z-10 p-2">
+            <OfflineBanner />
+          </div>
+
+          <MobileErrorBoundary>
+            <LoadingProvider>
+              {children}
+            </LoadingProvider>
+          </MobileErrorBoundary>
+        </main>
+
+        {/* Nav drawer — unmounted while closed (see MobileNavRail), so it
+            never reserves layout space or shows a divider. */}
         {showBottomNav && (
-          <MobileNavRail onTrackClick={(label, href) => trackButtonClick('nav_' + label.toLowerCase(), href)} />
+          <MobileNavRail
+            open={navOpen}
+            onClose={() => setNavOpen(false)}
+            onTrackClick={(label, href) => trackButtonClick('nav_' + label.toLowerCase(), href)}
+          />
         )}
-
-        {/* Content column — offset to clear the fixed rail's width (64px)
-            when the rail is shown; pages that opt out of nav (task
-            creation, payment, profile edit — focused single-task flows)
-            get the full width back instead of a blank 64px gap. */}
-        <div className={`flex min-w-0 flex-1 flex-col ${showBottomNav ? 'pl-16' : ''}`}>
-          <NetworkStatus />
-
-          {/* Top Header */}
-          <header className="flex items-center border-b border-gray-200 bg-white px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-            {showBack && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mr-2"
-                onClick={() => {
-                  trackButtonClick('back', pathname);
-                  onBack?.();
-                }}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
-            <h1 className="text-lg font-semibold text-gray-900">
-              {title || 'Wysa'}
-            </h1>
-          </header>
-
-          {/* Main Content with Error Boundary and Loading Provider */}
-          <main className="flex-1 overflow-y-auto">
-            {/* Offline Status Banner */}
-            <div className="sticky top-0 z-10 p-2">
-              <OfflineBanner />
-            </div>
-
-            <MobileErrorBoundary>
-              <LoadingProvider>
-                {children}
-              </LoadingProvider>
-            </MobileErrorBoundary>
-          </main>
-        </div>
 
         {/* Analytics Dashboard (dev only) */}
         <AnalyticsDashboard />
