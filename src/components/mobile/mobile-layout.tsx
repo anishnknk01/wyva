@@ -21,6 +21,10 @@ interface MobileLayoutProps {
   showBack?: boolean;
   showBottomNav?: boolean;
   onBack?: () => void;
+  // Optional content rendered at the right edge of the header (e.g. a
+  // notification bell on the Home screen). Every other page leaves this
+  // unset and the header is completely unchanged.
+  headerRight?: React.ReactNode;
 }
 
 // Kept in sync with the items inside MobileNavRail — used here only to
@@ -38,7 +42,8 @@ export function MobileLayout({
   title, 
   showBack = false, 
   showBottomNav = true,
-  onBack 
+  onBack,
+  headerRight,
 }: MobileLayoutProps) {
   const pathname = usePathname();
   const { trackButtonClick, trackGestureUsage } = useUserBehaviorAnalytics();
@@ -126,9 +131,12 @@ export function MobileLayout({
               <ArrowLeft className="h-5 w-5" />
             </Button>
           )}
-          <h1 className="px-2 text-lg font-semibold text-gray-900">
-            {title || 'Wysa'}
-          </h1>
+          {title !== undefined && (
+            <h1 className="flex-1 truncate px-2 text-lg font-semibold text-gray-900">
+              {title || 'Wysa'}
+            </h1>
+          )}
+          <div className="ml-auto">{headerRight}</div>
         </header>
 
         {/* Main Content with Error Boundary and Loading Provider — always

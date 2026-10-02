@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Calendar, 
@@ -11,7 +12,9 @@ import {
   ArrowRight,
   Briefcase,
   Star,
-  TrendingUp
+  TrendingUp,
+  ChevronRight,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +25,7 @@ import type { Task } from '@/lib/task-store';
 import type { User } from '@supabase/supabase-js';
 
 export function MobileDashboard() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
   const [myTasks, setMyTasks] = useState<Task[]>([]);
@@ -59,22 +63,42 @@ export function MobileDashboard() {
 
   return (
     <div className="p-4 space-y-6">
-      {/* Welcome Section */}
-      <div className="text-center py-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      {/* Top section: greeting → location → search. Kept compact (tight
+          spacing, smaller greeting) so the search bar is reached quickly
+          instead of after a tall centered welcome block. */}
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold text-gray-900">
           Good morning, {firstName}! 👋
         </h2>
-        <p className="text-gray-600 mb-4">
-          What would you like help with today?
-        </p>
-        
-        <Link href="/mobile/create-task">
-          <Button className="bg-teal-600 hover:bg-teal-700 w-full py-3 rounded-xl">
-            <Plus className="h-5 w-5 mr-2" />
-            Post a Task
-          </Button>
-        </Link>
+
+        <button
+          type="button"
+          className="flex w-full items-center gap-1.5 text-sm text-gray-600"
+        >
+          <MapPin className="h-4 w-4 text-teal-600" />
+          <span>Mangalore</span>
+          <ChevronRight className="h-4 w-4 text-gray-400" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => router.push('/mobile/find-tasks')}
+          className="flex w-full items-center gap-2.5 rounded-full border border-gray-200 bg-gray-50 px-4 py-3 text-left text-sm text-gray-500 transition-colors hover:bg-gray-100"
+        >
+          <Search className="h-4 w-4 shrink-0 text-gray-400" />
+          <span>What do you need help with?</span>
+        </button>
       </div>
+
+      {/* Post a Task CTA — kept as its own section rather than inside the
+          top block, so the top section stays focused on
+          greeting/location/search per the redesign. */}
+      <Link href="/mobile/create-task">
+        <Button className="bg-teal-600 hover:bg-teal-700 w-full py-3 rounded-xl">
+          <Plus className="h-5 w-5 mr-2" />
+          Post a Task
+        </Button>
+      </Link>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4">
