@@ -36,6 +36,11 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // Lets content extend into notch/home-indicator safe areas on iOS, which
+  // the new mobile nav rail (src/components/mobile/mobile-nav-rail.tsx)
+  // accounts for via env(safe-area-inset-*) padding. Has no visible effect
+  // on desktop or on devices without a notch/rounded-corner display.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

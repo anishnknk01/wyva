@@ -1,29 +1,19 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  Home, 
-  Search, 
-  Plus, 
-  MessageSquare, 
-  User,
-  ArrowLeft,
-  Menu
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { MobileErrorBoundary } from './error-boundary';
 import { NetworkStatus } from './network-status';
 import { OfflineBanner } from './offline-banner';
 import { LoadingProvider } from './loading-state-manager';
 import { AnalyticsProvider } from '@/components/analytics/analytics-provider';
 import { AnalyticsDashboard, PerformanceIndicator } from './analytics-dashboard';
-import { useUnreadMessages } from '@/hooks/use-chat';
 import { notificationService } from '@/lib/notifications';
 import { useSwipeNavigation } from '@/hooks/use-gestures';
 import { useUserBehaviorAnalytics } from '@/hooks/use-analytics-tracking';
+import { MobileNavRail } from './mobile-nav-rail';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -33,12 +23,14 @@ interface MobileLayoutProps {
   onBack?: () => void;
 }
 
-const bottomNavItems = [
-  { icon: Home, label: 'Home', href: '/mobile' },
-  { icon: Search, label: 'Find', href: '/mobile/find-tasks' },
-  { icon: Plus, label: 'Post', href: '/mobile/create-task' },
-  { icon: MessageSquare, label: 'Chats', href: '/mobile/messages' },
-  { icon: User, label: 'Profile', href: '/mobile/profile' },
+// Kept in sync with the items inside MobileNavRail — used here only to
+// drive the existing left/right swipe-between-sections gesture.
+const navSections = [
+  '/mobile',
+  '/mobile/find-tasks',
+  '/mobile/create-task',
+  '/mobile/messages',
+  '/mobile/profile',
 ];
 
 export function MobileLayout({ 
@@ -49,7 +41,6 @@ export function MobileLayout({
   onBack 
 }: MobileLayoutProps) {
   const pathname = usePathname();
-  const { unreadCount } = useUnreadMessages();
   const { trackButtonClick, trackGestureUsage } = useUserBehaviorAnalytics();
 
   // Handle swipe navigation between main sections with analytics
@@ -57,9 +48,9 @@ export function MobileLayout({
     () => {
       // Swipe left - go to next section
       trackGestureUsage('swipe_left', 'navigation');
-      const currentIndex = bottomNavItems.findIndex(item => item.href === pathname);
-      const nextIndex = (currentIndex + 1) % bottomNavItems.length;
-      const nextHref = bottomNavItems[nextIndex]?.href;
+      const currentIndex = navSections.findIndex(href => href === pathname);
+      const nextIndex = (currentIndex + 1) % navSections.length;
+      const nextHref = navSections[nextIndex];
       if (nextHref && nextHref !== pathname) {
         window.location.href = nextHref;
       }
@@ -67,9 +58,9 @@ export function MobileLayout({
     () => {
       // Swipe right - go to previous section  
       trackGestureUsage('swipe_right', 'navigation');
-      const currentIndex = bottomNavItems.findIndex(item => item.href === pathname);
-      const prevIndex = currentIndex > 0 ? currentIndex - 1 : bottomNavItems.length - 1;
-      const prevHref = bottomNavItems[prevIndex]?.href;
+      const currentIndex = navSections.findIndex(href => href === pathname);
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : navSections.length - 1;
+      const prevHref = navSections[prevIndex];
       if (prevHref && prevHref !== pathname) {
         window.location.href = prevHref;
       }
@@ -101,12 +92,27 @@ export function MobileLayout({
 
   return (
     <AnalyticsProvider>
-      <div ref={swipeRef} className="flex flex-col h-screen bg-white">
-        <NetworkStatus />
-        
-        {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center">
+      <div ref={swipeRef} className="flex h-screen bg-white">
+        {/* Left navigation rail — fixed, collapsed by default (~64px),
+            expands into an overlay drawer on tap. Replaces the old bottom
+            nav bar entirely. Rendered unconditionally (not gated by
+            showBottomNav) since it's now the only navigation surface this
+            layout offers; showBottomNav is kept as a prop for backward
+            compatibility with existing callers but no longer changes
+            anything structural. */}
+        {showBottomNav && (
+          <MobileNavRail onTrackClick={(label, href) => trackButtonClick('nav_' + label.toLowerCase(), href)} />
+        )}
+
+        {/* Content column — offset to clear the fixed rail's width (64px)
+            when the rail is shown; pages that opt out of nav (task
+            creation, payment, profile edit — focused single-task flows)
+            get the full width back instead of a blank 64px gap. */}
+        <div className={`flex min-w-0 flex-1 flex-col ${showBottomNav ? 'pl-16' : ''}`}>
+          <NetworkStatus />
+
+          {/* Top Header */}
+          <header className="flex items-center border-b border-gray-200 bg-white px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
             {showBack && (
               <Button
                 variant="ghost"
@@ -123,65 +129,23 @@ export function MobileLayout({
             <h1 className="text-lg font-semibold text-gray-900">
               {title || 'Wysa'}
             </h1>
-          </div>
-          
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => trackButtonClick('menu', pathname)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </header>
+          </header>
 
-        {/* Main Content with Error Boundary and Loading Provider */}
-        <main className="flex-1 overflow-y-auto">
-          {/* Offline Status Banner */}
-          <div className="sticky top-0 z-10 p-2">
-            <OfflineBanner />
-          </div>
-          
-          <MobileErrorBoundary>
-            <LoadingProvider>
-              {children}
-            </LoadingProvider>
-          </MobileErrorBoundary>
-        </main>
-
-        {/* Bottom Navigation */}
-        {showBottomNav && (
-          <nav className="bg-white border-t border-gray-200 px-2 py-1">
-            <div className="flex justify-around">
-              {bottomNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                const isMessages = item.href === '/mobile/messages';
-                
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex flex-col items-center py-2 px-3 rounded-lg min-w-0 flex-1 relative ${
-                      isActive 
-                        ? 'text-teal-600 bg-teal-50' 
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                    onClick={() => trackButtonClick('nav_' + item.label.toLowerCase(), item.href)}
-                  >
-                    <Icon className="h-5 w-5 mb-1" />
-                    <span className="text-xs font-medium">{item.label}</span>
-                    {isMessages && unreadCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0 min-w-[16px] h-4 rounded-full flex items-center justify-center">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </Badge>
-                    )}
-                  </Link>
-                );
-              })}
+          {/* Main Content with Error Boundary and Loading Provider */}
+          <main className="flex-1 overflow-y-auto">
+            {/* Offline Status Banner */}
+            <div className="sticky top-0 z-10 p-2">
+              <OfflineBanner />
             </div>
-          </nav>
-        )}
-        
+
+            <MobileErrorBoundary>
+              <LoadingProvider>
+                {children}
+              </LoadingProvider>
+            </MobileErrorBoundary>
+          </main>
+        </div>
+
         {/* Analytics Dashboard (dev only) */}
         <AnalyticsDashboard />
         <PerformanceIndicator />
