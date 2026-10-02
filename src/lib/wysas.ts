@@ -867,20 +867,33 @@ export type RealWysaProfile = {
 /** Looks up a real Wysa's public profile by their auth user id. */
 export async function getWysaProfile(userId: string): Promise<RealWysaProfile | null> {
   const supabase = createClient();
-  const [{ data: wysaProfile, error: wysaError }, { data: profile }, { data: workerSkills }] = await Promise.all([
+  const [{ data: wysaProfile, error: wysaError }, { data: profile }, { data: workerSkills }, { data: receivedRatings }, { count: completedCount }] = await Promise.all([
     supabase
       .from("wysa_profiles")
-      .select("id, area, bio, languages, interests, verified, rating, sessions_count")
+      .select("id, area, bio, languages, interests, verified")
       .eq("id", userId)
       .maybeSingle(),
     supabase.from("profiles").select("full_name, avatar_url").eq("id", userId).maybeSingle(),
     supabase.from("worker_skills").select("custom_skill_name").eq("user_id", userId),
+    // wysa_profiles.rating/sessions_count are stored columns that are
+    // never written anywhere in the app (always their table default of
+    // 0) — computed live from the real ratings/tasks data instead,
+    // rather than relying on a stale cached value.
+    supabase.from("ratings").select("stars").eq("ratee_id", userId),
+    supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .or(`accepted_wysa_id.eq.${userId},confirmed_wysa_id.eq.${userId}`)
+      .in("status", ["completed", "payment_released"]),
   ]);
 
   if (wysaError || !wysaProfile) return null;
 
-  const typedWysaProfile = wysaProfile as Pick<WysaProfileRow, "id" | "area" | "bio" | "languages" | "interests" | "verified" | "rating" | "sessions_count">;
+  const typedWysaProfile = wysaProfile as Pick<WysaProfileRow, "id" | "area" | "bio" | "languages" | "interests" | "verified">;
   const typedProfile = profile as Pick<ProfileRow, "full_name"> | null;
+
+  const stars = (receivedRatings ?? []).map((r: any) => r.stars as number);
+  const rating = stars.length > 0 ? stars.reduce((sum, s) => sum + s, 0) / stars.length : 0;
 
   return {
     id: typedWysaProfile.id,
@@ -892,7 +905,7 @@ export async function getWysaProfile(userId: string): Promise<RealWysaProfile | 
     interests: typedWysaProfile.interests,
     skills: (workerSkills ?? []).map((s: any) => s.custom_skill_name).filter(Boolean),
     verified: typedWysaProfile.verified,
-    rating: typedWysaProfile.rating,
-    sessionsCount: typedWysaProfile.sessions_count,
+    rating,
+    sessionsCount: completedCount ?? 0,
   };
 }

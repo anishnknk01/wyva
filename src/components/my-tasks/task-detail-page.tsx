@@ -37,10 +37,23 @@ import {
   getEffectiveStatus,
   type DisputeReason,
 } from "@/lib/tasks";
-import { updateTask, submitRating, type Task } from "@/lib/task-store";
+import { updateTask, updateTaskStatusWithMessage, submitRating, type Task } from "@/lib/task-store";
 import { getWysaProfile, type RealWysaProfile } from "@/lib/wysas";
 
-export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
+export function MyTaskDetailPage({
+  task: initialTask,
+  backHref = "/my-tasks",
+  messagesBasePath = "/messages",
+}: {
+  task: Task;
+  /** Back link above the card — defaults to the desktop My Tasks list.
+   * The mobile route passes "/mobile/my-tasks" so Back stays inside the
+   * mobile shell. */
+  backHref?: string;
+  /** Forwarded to WysaAcceptedCard's "Message" button — defaults to the
+   * desktop messages route. */
+  messagesBasePath?: string;
+}) {
   const [task, setTask] = useState(initialTask);
   const [acceptedWysa, setAcceptedWysa] = useState<RealWysaProfile | null>(null);
   const [disputeOpen, setDisputeOpen] = useState(false);
@@ -66,10 +79,13 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
   }, [task.acceptedWysaId]);
 
   async function handleConfirmWysa() {
-    const updated = await updateTask(task.id, {
-      status: "confirmed",
-      confirmedWysaId: task.acceptedWysaId,
-    });
+    if (!task.acceptedWysaId) return;
+    // Routed through updateTaskStatusWithMessage (not a raw updateTask
+    // patch) so confirming also sends the existing system message + push
+    // notification to the worker — same mechanism acceptTask already uses
+    // for "wysa_accepted", just applied to the "confirmed" transition that
+    // was previously bypassing it.
+    const updated = await updateTaskStatusWithMessage(task.id, "confirmed", task.acceptedWysaId);
     if (updated) setTask(updated);
     toast.success("Task confirmed");
   }
@@ -84,7 +100,11 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
   }
 
   async function handleTaskDone() {
-    const updated = await updateTask(task.id, { status: "payment_released" });
+    // Same fix as handleConfirmWysa — route through
+    // updateTaskStatusWithMessage so the worker is actually notified
+    // (system message + push) that payment was released, instead of a
+    // raw status patch that skips it.
+    const updated = await updateTaskStatusWithMessage(task.id, "payment_released", task.acceptedWysaId ?? undefined);
     if (updated) setTask(updated);
     toast.success("Payment released");
   }
@@ -127,7 +147,7 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <Link
-        href="/my-tasks"
+        href={backHref}
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
@@ -144,6 +164,7 @@ export function MyTaskDetailPage({ task: initialTask }: { task: Task }) {
               acceptedAt={task.updatedAt ?? task.createdAt}
               onConfirm={handleConfirmWysa}
               onChooseAnother={handleChooseAnother}
+              messagesBasePath={messagesBasePath}
             />
           ) : task.acceptedWysaId ? (
             <div className="rounded-2xl border border-teal-200 bg-teal-50 p-5">

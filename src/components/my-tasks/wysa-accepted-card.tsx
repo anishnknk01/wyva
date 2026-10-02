@@ -24,6 +24,7 @@ export function WysaAcceptedCard({
   acceptedAt,
   onConfirm,
   onChooseAnother,
+  messagesBasePath = "/messages",
 }: {
   wysa: RealWysaProfile;
   taskId: string;
@@ -31,6 +32,11 @@ export function WysaAcceptedCard({
   acceptedAt: string;
   onConfirm: () => void;
   onChooseAnother: () => void;
+  /** Base path for the "Message" button's chat route — defaults to the
+   * desktop messages route. The mobile task-detail page passes
+   * "/mobile/messages" so the link stays inside the mobile shell instead
+   * of navigating to the desktop messages page. */
+  messagesBasePath?: string;
 }) {
   const router = useRouter();
   const [showMore, setShowMore] = useState(false);
@@ -163,7 +169,7 @@ export function WysaAcceptedCard({
         {/* Message CTA — prominent, above confirm */}
         <button
           type="button"
-          onClick={() => router.push(`/messages/${taskId}?user=${wysa.id}`)}
+          onClick={() => router.push(`${messagesBasePath}/${taskId}?user=${wysa.id}`)}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 py-3 text-sm font-bold text-white hover:bg-teal-700 transition-colors"
         >
           <MessageCircle className="size-4" />

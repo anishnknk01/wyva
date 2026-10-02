@@ -5,7 +5,7 @@ import { MapPin, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { taskStatusLabels } from "@/lib/tasks";
+import { taskStatusLabels, getEffectiveStatus } from "@/lib/tasks";
 import type { Task } from "@/lib/task-store";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -30,12 +30,17 @@ export function WorkerActiveJobs({ tasks, loading }: Props) {
         {!loading && tasks.length === 0 && (
           <p className="py-6 text-center text-sm text-gray-400">No active jobs. Accept a task to get started.</p>
         )}
-        {!loading && tasks.map(task => (
+        {!loading && tasks.map(task => {
+          // Same effective-status computation Task Details already uses,
+          // so this badge doesn't lag behind showing "Confirmed" after
+          // the worker has started (or the scheduled time has passed).
+          const displayStatus = getEffectiveStatus(task.status, task.date, task.time);
+          return (
           <div key={task.id} className="rounded-xl border border-gray-100 p-4">
             <div className="mb-2 flex items-start justify-between gap-2">
               <h3 className="text-sm font-semibold text-gray-900 leading-snug">{task.title}</h3>
-              <Badge className={`shrink-0 text-xs ${STATUS_COLORS[task.status] ?? "border-gray-200 bg-gray-50 text-gray-600"}`}>
-                {taskStatusLabels[task.status]}
+              <Badge className={`shrink-0 text-xs ${STATUS_COLORS[displayStatus] ?? "border-gray-200 bg-gray-50 text-gray-600"}`}>
+                {taskStatusLabels[displayStatus]}
               </Badge>
             </div>
             <div className="mb-3 flex items-center gap-3 text-xs text-gray-500">
@@ -44,7 +49,7 @@ export function WorkerActiveJobs({ tasks, loading }: Props) {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="text-xs"
-                onClick={() => router.push(`/my-tasks/${task.id}`)}>
+                onClick={() => router.push(`/tasks/${task.id}`)}>
                 View Details
               </Button>
               <Button variant="outline" size="sm" className="text-xs"
@@ -53,7 +58,8 @@ export function WorkerActiveJobs({ tasks, loading }: Props) {
               </Button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );

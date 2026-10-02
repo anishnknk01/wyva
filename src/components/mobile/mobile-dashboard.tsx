@@ -19,7 +19,7 @@ import {
   MoreHorizontal,
   ImageIcon,
 } from 'lucide-react';
-import type { TaskCategory } from '@/lib/tasks';
+import { taskStatusLabels, getEffectiveStatus, type TaskCategory } from '@/lib/tasks';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
 import { listAvailableTasks, listAllTasksForCustomer } from '@/lib/task-store';
@@ -232,12 +232,9 @@ function TaskThumbnail({ task }: { task: Task }) {
 }
 
 function TaskCard({ task }: { task: Task }) {
-  // No mobile task-detail route exists yet, so this links to the Find
-  // Tasks list (where the task is actually viewable/actionable) rather
-  // than a per-task URL that doesn't resolve to a real page.
   return (
     <Link
-      href="/mobile/find-tasks"
+      href={`/mobile/tasks/${task.id}`}
       className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
     >
       <TaskThumbnail task={task} />
@@ -278,20 +275,13 @@ function MyTaskCard({ task }: { task: Task }) {
     'cancelled': 'bg-red-100 text-red-700',
     'under_review': 'bg-purple-100 text-purple-700',
   };
-  const statusLabels: Record<string, string> = {
-    'wysa_accepted': 'Confirmed',
-    'confirmed': 'Confirmed',
-    'in_progress': 'In Progress',
-    'waiting_for_wysa': 'Pending',
-    'payment_pending': 'Payment Pending',
-  };
-
-  // No mobile task-detail route exists yet, so this links to the My Tasks
-  // list (where the task is actually viewable/actionable) rather than a
-  // per-task URL that doesn't resolve to a real page.
+  // Same effective-status computation the Task Details pages use, so
+  // this badge doesn't lag behind showing "Confirmed" after the worker
+  // has actually started (or the scheduled time has passed).
+  const displayStatus = getEffectiveStatus(task.status, task.date, task.time);
   return (
     <Link
-      href="/mobile/my-tasks"
+      href={`/mobile/tasks/${task.id}`}
       className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
     >
       <TaskThumbnail task={task} />
@@ -311,8 +301,8 @@ function MyTaskCard({ task }: { task: Task }) {
       </div>
 
       <div className="flex shrink-0 flex-col items-end gap-1">
-        <Badge className={statusColors[task.status] || 'bg-gray-100 text-gray-700'}>
-          {statusLabels[task.status] || task.status.replace(/_/g, ' ')}
+        <Badge className={statusColors[displayStatus] || 'bg-gray-100 text-gray-700'}>
+          {taskStatusLabels[displayStatus] || displayStatus}
         </Badge>
         <span className="text-sm font-semibold text-gray-900">₹{task.budget}</span>
       </div>

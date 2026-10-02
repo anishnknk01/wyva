@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { taskStatusLabels } from "@/lib/tasks";
+import { taskStatusLabels, getEffectiveStatus } from "@/lib/tasks";
 import { getSavedTaskIds, toggleSavedTask } from "@/lib/saved-tasks";
 import type { DashboardData } from "@/hooks/use-dashboard-data";
 import type { Task } from "@/lib/task-store";
@@ -35,7 +35,11 @@ function timeAgo(iso: string) {
 }
 
 function TaskRow({ task, onClick }: { task: Task; onClick: () => void }) {
-  const statusCls = STATUS_COLORS[task.status] ?? "bg-gray-50 text-gray-600 border-gray-200";
+  // Same effective-status computation Task Details already uses, so this
+  // badge doesn't lag behind showing "Confirmed" after the worker has
+  // started (or the scheduled time has passed).
+  const displayStatus = getEffectiveStatus(task.status, task.date, task.time);
+  const statusCls = STATUS_COLORS[displayStatus] ?? "bg-gray-50 text-gray-600 border-gray-200";
   return (
     <button
       onClick={onClick}
@@ -44,7 +48,7 @@ function TaskRow({ task, onClick }: { task: Task; onClick: () => void }) {
       <div className="mb-2 flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-gray-900 leading-snug">{task.title}</h3>
         <Badge className={`shrink-0 text-xs border ${statusCls}`}>
-          {taskStatusLabels[task.status]}
+          {taskStatusLabels[displayStatus]}
         </Badge>
       </div>
       <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">

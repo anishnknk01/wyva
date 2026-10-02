@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
 import {
   listAvailableTasks,
   listWysaAcceptedTasks,
@@ -34,21 +33,22 @@ export function WorkerDashboardContent({ user }: Props) {
 
   const load = useCallback(async () => {
     if (!user) return;
-    const supabase = createClient();
-    const [avail, acc, comp, earn, { data: profile }] = await Promise.all([
+    // No "average_rating"/"total_ratings" column exists on profiles in
+    // the real schema — computed live via /api/ratings/[userId] (same
+    // endpoint the mobile profile and worker profile screens use)
+    // instead of a second rating system.
+    const [avail, acc, comp, earn, ratingResult] = await Promise.all([
       listAvailableTasks(),
       listWysaAcceptedTasks(user.id),
       listWysaCompletedTasks(user.id),
       calculateWysaEarnings(user.id),
-      supabase.from("profiles")
-        .select("average_rating, total_ratings")
-        .eq("id", user.id).single(),
+      fetch(`/api/ratings/${user.id}`).then((r) => (r.ok ? r.json() : null)),
     ]);
     setAvailable(avail);
     setActive(acc);
     setCompleted(comp);
     setEarnings(earn);
-    setProfileData(profile);
+    setProfileData(ratingResult?.profile ?? null);
     setLoading(false);
   }, [user]);
 

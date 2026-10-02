@@ -19,8 +19,6 @@ import type { Task } from "@/lib/task-store";
 type ProfileRow = {
   full_name: string;
   phone: string | null;
-  average_rating: number | null;
-  total_ratings: number | null;
   role: string | null;
 };
 
@@ -28,6 +26,10 @@ export function DashboardProfile() {
   const router = useRouter();
   const [user,    setUser]    = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  // No "average_rating"/"total_ratings" column exists on profiles in the
+  // real schema — computed live via /api/ratings/[userId] instead of a
+  // second rating system, same as the mobile/worker profile screens.
+  const [ratingData, setRatingData] = useState<{ average_rating: number; total_ratings: number } | null>(null);
   const [tasks,   setTasks]   = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,11 +44,20 @@ export function DashboardProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
-        const { data: p } = await supabase
-          .from("profiles")
-          .select("full_name, phone, average_rating, total_ratings, role")
-          .eq("id", user.id).single();
+        const [{ data: p }, ratingResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("full_name, phone, role")
+            .eq("id", user.id).single(),
+          fetch(`/api/ratings/${user.id}`).then((r) => (r.ok ? r.json() : null)),
+        ]);
         if (p) { setProfile(p); setNameInput(p.full_name ?? ""); setPhoneInput(p.phone ?? ""); }
+        if (ratingResult?.profile) {
+          setRatingData({
+            average_rating: ratingResult.profile.average_rating ?? 0,
+            total_ratings: ratingResult.profile.total_ratings ?? 0,
+          });
+        }
         setTasks(await listAllTasksForCustomer(user.id));
       }
       setLoading(false);
@@ -117,11 +128,11 @@ export function DashboardProfile() {
                   </div>
                   <p className="text-sm text-gray-500">{user?.email}</p>
                   {profile?.phone && <p className="text-sm text-gray-500">{profile.phone}</p>}
-                  {profile && (profile.average_rating ?? 0) > 0 && (
+                  {ratingData && ratingData.average_rating > 0 && (
                     <div className="flex items-center gap-1 mt-2">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium">{profile.average_rating?.toFixed(1)}</span>
-                      <span className="text-xs text-gray-400">({profile.total_ratings} ratings)</span>
+                      <span className="text-sm font-medium">{ratingData.average_rating.toFixed(1)}</span>
+                      <span className="text-xs text-gray-400">({ratingData.total_ratings} ratings)</span>
                     </div>
                   )}
                 </>

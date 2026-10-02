@@ -87,18 +87,22 @@ export function MobileProfile() {
         // These three loads are independent of each other — run them
         // concurrently instead of one after another to avoid ~3 avoidable
         // round trips of serial latency on every profile page visit.
-        const [profileResult, userTasks, userEarnings] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('average_rating, total_ratings')
-            .eq('id', user.id)
-            .single(),
+        // Rating summary comes from /api/ratings/[userId] — the same
+        // endpoint UserRatingProfile uses — which computes the average
+        // live from the real ratings table rather than a cached column
+        // (there's no "average_rating" column on profiles in the real
+        // schema).
+        const [ratingResult, userTasks, userEarnings] = await Promise.all([
+          fetch(`/api/ratings/${user.id}`).then((r) => (r.ok ? r.json() : null)),
           listAllTasksForCustomer(user.id),
           calculateWysaEarnings(user.id),
         ]);
 
-        if (profileResult.data) {
-          setProfile(profileResult.data);
+        if (ratingResult?.profile) {
+          setProfile({
+            average_rating: ratingResult.profile.average_rating ?? 0,
+            total_ratings: ratingResult.profile.total_ratings ?? 0,
+          });
         }
         setTasks(userTasks);
         setEarnings(userEarnings);

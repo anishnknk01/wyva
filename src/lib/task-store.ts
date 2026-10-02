@@ -6,6 +6,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TaskCategory, TaskStatus, DisputeReason, PaymentMethod } from "@/lib/tasks";
+import { getEffectiveStatus } from "@/lib/tasks";
 import { sendSystemMessage } from "@/lib/message-store";
 
 export type TaskRating = {
@@ -324,6 +325,11 @@ export async function submitRating(
   review: string
 ): Promise<boolean> {
   try {
+    // Body shape matches the real `ratings` table columns the API route
+    // writes to (rater is derived from the session server-side, not sent
+    // here — raterId is kept as a parameter only because both detail
+    // pages' handleRate already pass it, and attachRatings() needs to
+    // know which side a given review was submitted from).
     const response = await fetch('/api/ratings', {
       method: 'POST',
       headers: {
@@ -331,10 +337,9 @@ export async function submitRating(
       },
       body: JSON.stringify({
         taskId,
-        ratedId: rateeId,
-        rating: stars,
-        review: review || null,
-        ratingType: 'task_completion'
+        rateeId,
+        stars,
+        review: review || '',
       })
     });
 
@@ -428,6 +433,70 @@ export async function updateTaskStatusWithMessage(
   if (!currentTask) {
     console.error("updateTaskStatusWithMessage failed - task not found");
     return null;
+  }
+
+  // Guard the one transition that's racy: two Wysas tapping "Apply"
+  // around the same time could otherwise both succeed (last write wins),
+  // silently reassigning a task that was already accepted. Checked
+  // against the freshly-loaded task rather than trusting stale client
+  // state.
+  if (newStatus === "wysa_accepted" && currentTask.status !== "waiting_for_wysa") {
+    console.error("updateTaskStatusWithMessage: task is no longer waiting_for_wysa, refusing to accept", {
+      taskId,
+      currentStatus: currentTask.status,
+    });
+    return null;
+  }
+
+  // A customer can't accept their own task — the RLS policy only checks
+  // status (not who's accepting), so this is enforced here instead.
+  if (newStatus === "wysa_accepted" && wysaId && currentTask.customerId === wysaId) {
+    console.error("updateTaskStatusWithMessage: customer cannot accept their own task", { taskId });
+    return null;
+  }
+
+  // Starting a task only makes sense from "confirmed" — not from
+  // "waiting_for_wysa"/"wysa_accepted" (nothing confirmed yet) and not
+  // from a later state (already started/completed, so this would be a
+  // stale double-tap or a replayed request). Also: only the worker who
+  // was actually confirmed for this task can start or complete it — the
+  // task owner (customer) performs different actions (confirm, task
+  // done) and must never be able to drive these on the worker's behalf.
+  if (newStatus === "in_progress") {
+    if (currentTask.status !== "confirmed") {
+      console.error("updateTaskStatusWithMessage: task is not confirmed, refusing to start", {
+        taskId,
+        currentStatus: currentTask.status,
+      });
+      return null;
+    }
+    if (currentTask.confirmedWysaId !== user.id && currentTask.acceptedWysaId !== user.id) {
+      console.error("updateTaskStatusWithMessage: only the assigned worker can start this task", { taskId });
+      return null;
+    }
+  }
+
+  // Completing only makes sense once the task is under way — either
+  // explicitly started (stored status "in_progress") or, for tasks that
+  // were confirmed but never explicitly started before their scheduled
+  // time passed, the same time-based "effectively in progress" fallback
+  // the UI already uses via getEffectiveStatus. Without allowing that
+  // second case, a worker who skipped "Start task" (or whose task was
+  // confirmed before this flow existed) would get stuck unable to ever
+  // complete it. Same assigned-worker check as starting.
+  if (newStatus === "completed") {
+    const effectiveStatus = getEffectiveStatus(currentTask.status, currentTask.date, currentTask.time);
+    if (effectiveStatus !== "in_progress") {
+      console.error("updateTaskStatusWithMessage: task is not in progress, refusing to complete", {
+        taskId,
+        currentStatus: currentTask.status,
+      });
+      return null;
+    }
+    if (currentTask.confirmedWysaId !== user.id && currentTask.acceptedWysaId !== user.id) {
+      console.error("updateTaskStatusWithMessage: only the assigned worker can complete this task", { taskId });
+      return null;
+    }
   }
 
   // Update task status
@@ -525,7 +594,7 @@ export async function updateTaskStatusWithMessage(
               taskId,
               type: 'task_update',
               status: newStatus,
-              url: `/mobile/my-tasks/${taskId}`,
+              url: `/mobile/tasks/${taskId}`,
             },
           }),
         });

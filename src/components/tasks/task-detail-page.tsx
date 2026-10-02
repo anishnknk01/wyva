@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Loader2,
   CheckCircle2,
+  PlayCircle,
   Broom, ShoppingCart, Truck, HeartHandshake, Baby,
   BookOpen, Monitor, PartyPopper, Utensils, Camera,
   Dumbbell, Compass, Hospital, HelpCircle, Images,
@@ -39,7 +40,7 @@ import {
   taskStatusLabels,
   type TaskStatus,
 } from "@/lib/tasks";
-import { updateTask, acceptTask, submitRating, type Task } from "@/lib/task-store";
+import { acceptTask, updateTaskStatusWithMessage, submitRating, loadTask, type Task } from "@/lib/task-store";
 import { useUser } from "@/lib/use-user";
 
 // Same category → icon mapping used when the customer posts a task, so the
@@ -125,7 +126,20 @@ function InfoTile({
   );
 }
 
-export function TaskDetailPage({ task: initialTask }: { task: Task }) {
+export function TaskDetailPage({
+  task: initialTask,
+  backHref = "/worker/find-tasks",
+  findMoreHref = "/tasks",
+}: {
+  task: Task;
+  /** Back link above the card — defaults to the desktop Find Tasks list.
+   * The mobile route passes "/mobile/find-tasks" so Back stays inside the
+   * mobile shell. */
+  backHref?: string;
+  /** "Find more tasks" link shown on the dismiss ("not for me") screen —
+   * same default-plus-override pattern as backHref. */
+  findMoreHref?: string;
+}) {
   const { user } = useUser();
   const [task, setTask] = useState(initialTask);
   const [acceptOpen, setAcceptOpen] = useState(false);
@@ -134,6 +148,7 @@ export function TaskDetailPage({ task: initialTask }: { task: Task }) {
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const isMine = !!user && task.acceptedWysaId === user.id;
+  const isOwnTask = !!user && task.customerId === user.id;
   const status = getEffectiveStatus(task.status, task.date, task.time);
 
   async function handleAccept() {
@@ -141,17 +156,50 @@ export function TaskDetailPage({ task: initialTask }: { task: Task }) {
       toast.error("Please log in to accept a task.");
       return;
     }
+    if (task.customerId === user.id) {
+      toast.error("You can't apply to your own task.");
+      return;
+    }
     // acceptTask calls updateTaskStatusWithMessage which sets accepted_wysa_id,
     // sends a system message, and fires a push notification to the customer.
 
     const updated = await acceptTask(task.id);
-    if (updated) setTask(updated);
     setAcceptOpen(false);
-    toast.success("Task accepted — the customer has been notified.");
+    if (updated) {
+      setTask(updated);
+      toast.success("Task accepted — the customer has been notified.");
+    } else {
+      // Reload so the UI reflects reality (e.g. someone else already
+      // took it) instead of silently claiming success on a failed accept.
+      const latest = await loadTask(task.id);
+      if (latest) setTask(latest);
+      toast.error("Couldn't accept this task — it may have already been taken.");
+    }
+  }
+
+  async function handleStartTask() {
+    // Only reachable when isMine is true (see renderPrimaryAction), so the
+    // accepted/confirmed worker is the only one who can ever call this —
+    // same permission shape as handleAccept/handleMarkComplete below.
+    const updated = await updateTaskStatusWithMessage(task.id, "in_progress", task.acceptedWysaId ?? undefined);
+    if (updated) {
+      setTask(updated);
+      toast.success("Task started", {
+        description: "The customer has been notified.",
+      });
+    } else {
+      const latest = await loadTask(task.id);
+      if (latest) setTask(latest);
+      toast.error("Couldn't start the task — please try again.");
+    }
   }
 
   async function handleMarkComplete() {
-    const updated = await updateTask(task.id, { status: "completed" });
+    // Routed through updateTaskStatusWithMessage (not a raw updateTask
+    // patch) so marking complete also sends the existing system message +
+    // push notification to the customer — same fix pattern already applied
+    // to confirming a task.
+    const updated = await updateTaskStatusWithMessage(task.id, "completed", task.acceptedWysaId ?? undefined);
     if (updated) setTask(updated);
     toast.success("Marked as complete", {
       description: "Waiting for the customer to confirm the task is done.",
@@ -185,7 +233,7 @@ export function TaskDetailPage({ task: initialTask }: { task: Task }) {
         <p className="mt-1.5 text-sm text-muted-foreground">
           You can keep browsing for other tasks that fit better.
         </p>
-        <Button className="mt-6 rounded-full" render={<Link href="/tasks" />}>
+        <Button className="mt-6 rounded-full" render={<Link href={findMoreHref} />}>
           Find more tasks
         </Button>
       </div>
@@ -216,6 +264,19 @@ export function TaskDetailPage({ task: initialTask }: { task: Task }) {
 
   // Primary CTA — one obvious action per state, never competing buttons.
   function renderPrimaryAction() {
+    // A customer viewing their own posted task (e.g. via a shared link,
+    // or by browsing while also being the poster) should never see an
+    // "Apply" button — this is the worker-facing accept flow and the
+    // database allows a customer to accept their own waiting_for_wysa
+    // task (the RLS policy only checks status, not who's accepting), so
+    // this has to be guarded here at the UI layer.
+    if (isOwnTask) {
+      return (
+        <Button size="lg" className="w-full rounded-full" disabled variant="outline">
+          This is your task
+        </Button>
+      );
+    }
     if (!task.acceptedWysaId) {
       // Gated the same way as the task list card: the server checks the
       // worker's profile (required fields — no arbitrary percentage cutoff)
@@ -252,10 +313,18 @@ export function TaskDetailPage({ task: initialTask }: { task: Task }) {
         </Button>
       );
     }
-    if (status === "wysa_accepted" || status === "confirmed") {
+    if (status === "wysa_accepted") {
       return (
         <Button size="lg" className="w-full rounded-full" variant="outline" disabled>
-          {status === "confirmed" ? "Confirmed — view job" : "Application sent"}
+          Application sent
+        </Button>
+      );
+    }
+    if (status === "confirmed") {
+      return (
+        <Button size="lg" className="w-full rounded-full bg-purple-600 hover:bg-purple-700" onClick={handleStartTask}>
+          <PlayCircle className="size-4" />
+          Start task
         </Button>
       );
     }
@@ -289,7 +358,7 @@ export function TaskDetailPage({ task: initialTask }: { task: Task }) {
   return (
     <div className={`mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-10 ${showStickyBar ? "pb-28 sm:pb-10" : ""}`}>
       <Link
-        href="/worker/find-tasks"
+        href={backHref}
         className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />

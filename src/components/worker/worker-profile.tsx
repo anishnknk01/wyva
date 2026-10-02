@@ -47,11 +47,32 @@ export function WorkerProfile() {
   const { data, loading, refresh } = useWorkerProfile();
   const [openSection, setOpenSection] = useState<Section>(null);
   const [eligibility, setEligibility] = useState<{ canApply: boolean; missing: string[]; completionScore: number } | null>(null);
+  // There's no "average_rating"/"total_ratings"/"total_tasks_completed"
+  // column on profiles in the real schema — computed live via the same
+  // /api/ratings/[userId] endpoint the mobile profile and reviews screens
+  // already use, instead of a second rating system.
+  const [ratingData, setRatingData] = useState<{ average_rating: number; total_ratings: number; total_tasks_completed: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/worker/eligibility", { cache: "no-store" })
       .then(r => r.json()).then(setEligibility);
   }, [data]); // re-fetch whenever profile data refreshes
+
+  useEffect(() => {
+    const userId = data?.profile?.id;
+    if (!userId) return;
+    fetch(`/api/ratings/${userId}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(result => {
+        if (result?.profile) {
+          setRatingData({
+            average_rating: result.profile.average_rating ?? 0,
+            total_ratings: result.profile.total_ratings ?? 0,
+            total_tasks_completed: result.profile.total_tasks_completed ?? 0,
+          });
+        }
+      });
+  }, [data?.profile?.id]);
 
   if (loading) return (
     <div className="flex h-64 items-center justify-center">
@@ -135,9 +156,9 @@ export function WorkerProfile() {
         <div className="mt-4 flex items-center gap-5 text-sm text-gray-500 border-t border-gray-50 pt-4">
           <span className="flex items-center gap-1">
             <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-            {profile?.average_rating?.toFixed(1) ?? "0"} Ratings
+            {ratingData?.average_rating?.toFixed(1) ?? "0"} Ratings
           </span>
-          <span>{profile?.total_tasks_completed ?? 0} Jobs</span>
+          <span>{ratingData?.total_tasks_completed ?? 0} Jobs</span>
           {profile?.created_at && <span>Since {memberSince(profile.created_at)}</span>}
         </div>
       </div>
@@ -295,16 +316,16 @@ export function WorkerProfile() {
         {/* Reviews */}
         <ProfileCard
           title="Reviews"
-          onEdit={profile?.total_ratings ? () => toggle("ratings") : undefined}
+          onEdit={ratingData?.total_ratings ? () => toggle("ratings") : undefined}
           editLabel="View all"
         >
           <div className="flex items-center gap-2">
-            <Star className={`h-5 w-5 ${(profile?.average_rating ?? 0) > 0 ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
+            <Star className={`h-5 w-5 ${(ratingData?.average_rating ?? 0) > 0 ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`} />
             <span className="text-lg font-bold text-gray-900">
-              {(profile?.average_rating ?? 0) > 0 ? profile!.average_rating!.toFixed(1) : "0.0"}
+              {(ratingData?.average_rating ?? 0) > 0 ? ratingData!.average_rating.toFixed(1) : "0.0"}
             </span>
             <span className="text-xs text-gray-400">
-              {profile?.total_ratings ? `${profile.total_ratings} review${profile.total_ratings !== 1 ? "s" : ""}` : "No reviews yet"}
+              {ratingData?.total_ratings ? `${ratingData.total_ratings} review${ratingData.total_ratings !== 1 ? "s" : ""}` : "No reviews yet"}
             </span>
           </div>
         </ProfileCard>

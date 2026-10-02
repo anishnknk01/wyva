@@ -13,9 +13,8 @@ import { useErrorHandler } from '@/hooks/use-error-handler'
 
 interface Review {
   id: string
-  rating: number
+  stars: number
   review: string | null
-  rating_type: 'task_completion' | 'task_posting'
   created_at: string
   rater: {
     id: string
@@ -148,16 +147,6 @@ function ReviewCard({ review }: { review: Review }) {
     }
   }
 
-  const getRatingTypeLabel = (type: string) => {
-    return type === 'task_completion' ? 'Task Completion' : 'Task Posting'
-  }
-
-  const getRatingTypeColor = (type: string) => {
-    return type === 'task_completion' 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-blue-100 text-blue-800'
-  }
-
   return (
     <Card>
       <CardContent className="p-4">
@@ -180,20 +169,13 @@ function ReviewCard({ review }: { review: Review }) {
                 {review.rater.full_name}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <RatingStars rating={review.rating} size="sm" />
+                <RatingStars rating={review.stars} size="sm" />
                 <span className="text-xs text-gray-500">
                   {formatDate(review.created_at)}
                 </span>
               </div>
             </div>
           </div>
-          
-          <Badge 
-            variant="outline" 
-            className={`text-xs ${getRatingTypeColor(review.rating_type)}`}
-          >
-            {getRatingTypeLabel(review.rating_type)}
-          </Badge>
         </div>
 
         {/* Task Info */}

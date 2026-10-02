@@ -11,18 +11,34 @@ type Props = { data: any };
 export function SectionRatings({ data }: Props) {
   const { profile } = data;
   const [reviews, setReviews] = useState<Review[]>([]);
+  // average_rating/total_ratings/total_tasks_completed don't exist as
+  // columns on profiles in the real schema — /api/ratings/[userId]
+  // computes them live from the real ratings table, so use its response
+  // directly instead of (nonexistent) profile fields.
+  const [summary, setSummary] = useState<{ average_rating: number; total_ratings: number; total_tasks_completed: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!profile?.id) { setLoading(false); return; }
     fetch(`/api/ratings/${profile.id}`)
       .then(r => r.json())
-      .then(d => { setReviews(d.ratings ?? []); setLoading(false); })
+      .then(d => {
+        setReviews(d.ratings ?? []);
+        if (d.profile) {
+          setSummary({
+            average_rating: d.profile.average_rating ?? 0,
+            total_ratings: d.profile.total_ratings ?? 0,
+            total_tasks_completed: d.profile.total_tasks_completed ?? 0,
+          });
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [profile?.id]);
 
-  const avg    = profile?.average_rating ?? 0;
-  const total  = profile?.total_ratings ?? 0;
+  const avg    = summary?.average_rating ?? 0;
+  const total  = summary?.total_ratings ?? 0;
+  const tasksCompleted = summary?.total_tasks_completed ?? 0;
   const onTime = profile?.on_time_rate ?? null;
   const cancel = profile?.cancellation_rate ?? null;
 
@@ -38,7 +54,7 @@ export function SectionRatings({ data }: Props) {
           <div className="text-xs text-gray-500">Overall rating</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">{profile?.total_tasks_completed ?? 0}</div>
+          <div className="text-2xl font-bold text-gray-900">{tasksCompleted}</div>
           <div className="text-xs text-gray-500">Tasks completed</div>
         </div>
         {onTime != null && (

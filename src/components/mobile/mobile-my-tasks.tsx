@@ -24,7 +24,7 @@ import { TaskListLoading, useAsyncOperation } from '@/components/mobile/loading-
 import { useOptimisticList } from '@/hooks/use-optimistic';
 import { createClient } from '@/lib/supabase/client';
 import { listAllTasksForCustomer } from '@/lib/task-store';
-import { taskStatusLabels } from '@/lib/tasks';
+import { taskStatusLabels, getEffectiveStatus } from '@/lib/tasks';
 import type { Task } from '@/lib/task-store';
 import type { User } from '@supabase/supabase-js';
 
@@ -184,6 +184,13 @@ function TaskCard({ task }: { task: Task }) {
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-700';
   };
 
+  // Display status — same effective-status computation the Task Details
+  // pages already use (promotes a confirmed task to "in progress" once
+  // its scheduled time has passed, or once the worker has explicitly
+  // started it), so the badge shown here always matches what's shown on
+  // the task's own detail page instead of lagging behind on "Confirmed".
+  const displayStatus = getEffectiveStatus(task.status, task.date, task.time);
+
   const canChat = task.status === 'wysa_accepted' || task.status === 'confirmed' || task.status === 'in_progress';
   const needsPayment = task.status === 'payment_pending';
   const canViewDetails = task.status !== 'draft';
@@ -192,7 +199,7 @@ function TaskCard({ task }: { task: Task }) {
     if (needsPayment) {
       router.push(`/mobile/pay-task/${task.id}`);
     } else if (canViewDetails) {
-      router.push(`/mobile/task-detail/${task.id}`);
+      router.push(`/mobile/tasks/${task.id}`);
     }
   };
 
@@ -209,8 +216,8 @@ function TaskCard({ task }: { task: Task }) {
             </p>
           </div>
           <div className="ml-3 flex items-center space-x-2">
-            <Badge className={getStatusColor(task.status)}>
-              {taskStatusLabels[task.status] || task.status}
+            <Badge className={getStatusColor(displayStatus)}>
+              {taskStatusLabels[displayStatus] || displayStatus}
             </Badge>
             <Sheet open={showActions} onOpenChange={setShowActions}>
               <SheetTrigger>
@@ -234,7 +241,7 @@ function TaskCard({ task }: { task: Task }) {
                   {canViewDetails && (
                     <Button 
                       variant="outline"
-                      onClick={() => router.push(`/mobile/task-detail/${task.id}`)}
+                      onClick={() => router.push(`/mobile/tasks/${task.id}`)}
                     >
                       View Details
                     </Button>

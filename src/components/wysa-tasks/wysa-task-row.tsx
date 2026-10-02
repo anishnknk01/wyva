@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MapPin, CalendarDays } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatDateLong, taskStatusLabels } from "@/lib/tasks";
+import { formatCurrency, formatDateLong, taskStatusLabels, getEffectiveStatus } from "@/lib/tasks";
 import type { Task } from "@/lib/task-store";
 
 const statusStyles: Record<string, string> = {
@@ -16,6 +16,10 @@ const statusStyles: Record<string, string> = {
 
 /** Row for a task on the Wysa side, linking to the Wysa task detail view. */
 export function WysaTaskRow({ task }: { task: Task }) {
+  // Same effective-status computation Task Details already uses, so this
+  // badge doesn't lag behind showing "Confirmed" after the worker has
+  // started (or the scheduled time has passed).
+  const displayStatus = getEffectiveStatus(task.status, task.date, task.time);
   return (
     <Link
       href={`/tasks/${task.id}`}
@@ -24,9 +28,9 @@ export function WysaTaskRow({ task }: { task: Task }) {
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-2">
           <Badge
-            className={`h-auto gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles[task.status] ?? "bg-muted text-muted-foreground"}`}
+            className={`h-auto gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles[displayStatus] ?? "bg-muted text-muted-foreground"}`}
           >
-            {taskStatusLabels[task.status]}
+            {taskStatusLabels[displayStatus]}
           </Badge>
           <span className="font-mono text-xs text-muted-foreground">{task.id}</span>
         </div>
