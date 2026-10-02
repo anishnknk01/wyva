@@ -105,7 +105,7 @@ export function MobileLayout({
             the nav drawer. There's no permanently-visible rail anymore:
             the drawer (MobileNavRail) is unmounted entirely while closed,
             so content always gets the full viewport width. */}
-        <header className="flex items-center gap-1 border-b border-gray-200 bg-white px-2 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <header className="flex min-w-0 items-center gap-1 overflow-hidden border-b border-gray-200 bg-white px-2 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           {showBottomNav && (
             <Button
               variant="ghost"
