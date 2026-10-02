@@ -15,7 +15,16 @@ import {
   TrendingUp,
   ChevronRight,
   Search,
+  ShoppingCart,
+  Truck,
+  HeartHandshake,
+  Baby,
+  Utensils,
+  PartyPopper,
+  Compass,
+  MoreHorizontal,
 } from 'lucide-react';
+import type { TaskCategory } from '@/lib/tasks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +32,25 @@ import { createClient } from '@/lib/supabase/client';
 import { listAvailableTasks, listAllTasksForCustomer } from '@/lib/task-store';
 import type { Task } from '@/lib/task-store';
 import type { User } from '@supabase/supabase-js';
+
+// Real task categories from src/lib/tasks.ts (taskCategories) — a
+// representative subset of 7, each with the same icon already used
+// elsewhere for that category (see CATEGORY_ICONS in
+// src/components/tasks/task-detail-page.tsx), plus "More" linking to the
+// full category list via the existing advanced search panel on Find Tasks.
+// Tapping one navigates to /mobile/find-tasks?category=<name>, which
+// MobileFindTasks reads on mount and applies as a real filter against the
+// actual task data — not a decorative label.
+const homeCategories: { label: string; icon: React.ElementType; category?: TaskCategory }[] = [
+  { label: 'Shopping', icon: ShoppingCart, category: 'Shopping' },
+  { label: 'Errands', icon: Truck, category: 'Errands' },
+  { label: 'Elder Care', icon: HeartHandshake, category: 'Elder assistance' },
+  { label: 'Companion', icon: Baby, category: 'Companion' },
+  { label: 'Food', icon: Utensils, category: 'Food' },
+  { label: 'Events', icon: PartyPopper, category: 'Events' },
+  { label: 'Explore', icon: Compass, category: 'Local exploration' },
+  { label: 'More', icon: MoreHorizontal },
+];
 
 export function MobileDashboard() {
   const router = useRouter();
@@ -88,6 +116,36 @@ export function MobileDashboard() {
           <Search className="h-4 w-4 shrink-0 text-gray-400" />
           <span>What do you need help with?</span>
         </button>
+      </div>
+
+      {/* Category row — compact icon-over-label cards, horizontally
+          scrollable. Each tap routes to Find Tasks with a real category
+          filter pre-applied (see MobileFindTasks' category query param
+          handling); "More" opens Find Tasks' existing advanced search
+          panel, which already lists every category. */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-900">Browse by category</h3>
+        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-hide">
+          {homeCategories.map(({ label, icon: Icon, category }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() =>
+                router.push(
+                  category
+                    ? `/mobile/find-tasks?category=${encodeURIComponent(category)}`
+                    : '/mobile/find-tasks?more=1'
+                )
+              }
+              className="flex shrink-0 flex-col items-center gap-1.5"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 text-teal-600">
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className="text-xs font-medium text-gray-700">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Post a Task CTA — kept as its own section rather than inside the

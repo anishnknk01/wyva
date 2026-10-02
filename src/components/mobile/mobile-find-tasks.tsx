@@ -48,6 +48,26 @@ export function MobileFindTasks() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isVoiceSearchActive, setIsVoiceSearchActive] = useState(false);
 
+  // Pick up an initial category filter from the URL (e.g. ?category=Shopping),
+  // used when arriving here from the Home screen's category row. Read via
+  // window.location rather than useSearchParams() — this component is used
+  // on a client-rendered page, but the rest of this codebase deliberately
+  // avoids useSearchParams() since it previously broke static prerendering
+  // on other routes; same pattern kept here for consistency.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get("category");
+    if (category) {
+      setActiveFilters((prev) => (prev.includes(`category:${category}`) ? prev : [...prev, `category:${category}`]));
+    }
+    // "More" from the Home screen's category row — open the existing
+    // advanced search panel, which already lists every real category,
+    // instead of inventing a separate category picker.
+    if (params.get("more") === "1") {
+      setShowAdvancedSearch(true);
+    }
+  }, []);
+
   // Local, client-side filtering of the already-loaded `tasks` list — this
   // screen doesn't hit a server search endpoint, it filters what's already
   // in memory by query text + the active category/location/budget chips.
