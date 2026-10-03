@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getBaseUrl } from '@/lib/utils';
 
 // NOTE: this route previously targeted a different, never-migrated
 // ratings schema (columns `rated_id`/`rating`/`rating_type`, plus
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
     // the internal secret header instead. Best-effort: a failed
     // notification should never fail the rating submission itself.
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/api/notifications/send`, {
+      await fetch(`${getBaseUrl()}/api/notifications/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

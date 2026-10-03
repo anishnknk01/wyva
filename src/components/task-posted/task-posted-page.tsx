@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDateLong, formatTime12h, taskDurationLabel } from "@/lib/tasks";
 import type { Task } from "@/lib/task-store";
 
-export function TaskPostedPage({ task }: { task: Task }) {
+export function TaskPostedPage({ task, viewTaskHref }: { task: Task; viewTaskHref?: string }) {
   return (
     <div className="mx-auto max-w-xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="flex flex-col items-center text-center">
@@ -73,7 +73,7 @@ export function TaskPostedPage({ task }: { task: Task }) {
       <Button
         size="lg"
         className="mt-6 w-full rounded-full"
-        render={<Link href={`/my-tasks/${task.id}`} />}
+        render={<Link href={viewTaskHref || `/my-tasks/${task.id}`} />}
       >
         View my task
       </Button>

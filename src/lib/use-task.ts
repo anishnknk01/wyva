@@ -8,11 +8,11 @@ import { loadTask, type Task } from "@/lib/task-store";
  * callers can avoid a flash of "not found" while the fetch is in flight. */
 export function useTask(taskId: string | undefined) {
   const [task, setTask] = useState<Task | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(taskId));
 
   useEffect(() => {
     if (!taskId) {
-      setLoading(false);
+      setTask(null);
       return;
     }
     let active = true;

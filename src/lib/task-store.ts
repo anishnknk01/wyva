@@ -559,7 +559,7 @@ export async function updateTaskStatusWithMessage(
     // Send push notification for task status update
     try {
       let notificationTitle = '';
-      let notificationBody = messageText;
+      const notificationBody = messageText;
       
       switch (newStatus) {
         case 'wysa_accepted':

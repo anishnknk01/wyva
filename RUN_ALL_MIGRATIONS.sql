@@ -276,5 +276,227 @@ BEGIN
 END;
 $$;
 
+-- ── STEP 9: Tasks exact location and media columns ──────────────────────────
+ALTER TABLE tasks
+  ADD COLUMN IF NOT EXISTS location_name text,
+  ADD COLUMN IF NOT EXISTS location_address text,
+  ADD COLUMN IF NOT EXISTS photos text[],
+  ADD COLUMN IF NOT EXISTS location_coordinates jsonb;
+
+-- ── STEP 10: Messages and real-time chat ────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id text NOT NULL REFERENCES public.tasks (id) ON DELETE CASCADE,
+  sender_id uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
+  receiver_id uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
+  message_text text NOT NULL,
+  message_type text NOT NULL DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'system')),
+  image_url text,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS messages_task_id_idx ON public.messages (task_id);
+CREATE INDEX IF NOT EXISTS messages_sender_id_idx ON public.messages (sender_id);
+CREATE INDEX IF NOT EXISTS messages_receiver_id_idx ON public.messages (receiver_id);
+CREATE INDEX IF NOT EXISTS messages_created_at_idx ON public.messages (created_at);
+
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view messages they sent or received" ON public.messages;
+CREATE POLICY "Users can view messages they sent or received"
+  ON public.messages FOR SELECT
+  TO authenticated
+  USING (sender_id = auth.uid() OR receiver_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can send messages" ON public.messages;
+CREATE POLICY "Users can send messages"
+  ON public.messages FOR INSERT
+  TO authenticated
+  WITH CHECK (sender_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can update their own messages" ON public.messages;
+CREATE POLICY "Users can update their own messages"
+  ON public.messages FOR UPDATE
+  TO authenticated
+  USING (sender_id = auth.uid() OR receiver_id = auth.uid());
+
+DROP TRIGGER IF EXISTS messages_set_updated_at ON public.messages;
+CREATE TRIGGER messages_set_updated_at
+  BEFORE UPDATE ON public.messages
+  FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
+
+CREATE OR REPLACE FUNCTION public.get_user_conversations(user_id uuid)
+RETURNS TABLE (
+  task_id           text,
+  other_user_id     uuid,
+  other_user_name   text,
+  other_user_avatar text,
+  last_message      text,
+  last_message_at   timestamptz,
+  unread_count      bigint,
+  task_title        text,
+  task_status       text,
+  conversation_id   text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH latest AS (
+    SELECT DISTINCT ON (m.task_id,
+                         LEAST(m.sender_id, m.receiver_id),
+                         GREATEST(m.sender_id, m.receiver_id))
+      m.task_id,
+      CASE WHEN m.sender_id = user_id THEN m.receiver_id ELSE m.sender_id END AS other_user_id,
+      m.message_text AS last_message,
+      m.created_at   AS last_message_at
+    FROM public.messages m
+    WHERE m.sender_id = user_id OR m.receiver_id = user_id
+    ORDER BY m.task_id,
+             LEAST(m.sender_id, m.receiver_id),
+             GREATEST(m.sender_id, m.receiver_id),
+             m.created_at DESC
+  ),
+  unread AS (
+    SELECT m.task_id,
+           CASE WHEN m.sender_id = user_id THEN m.receiver_id ELSE m.sender_id END AS other_user_id,
+           COUNT(*) AS cnt
+    FROM public.messages m
+    WHERE m.receiver_id = user_id AND m.read_at IS NULL
+    GROUP BY m.task_id, other_user_id
+  )
+  SELECT
+    l.task_id,
+    l.other_user_id,
+    COALESCE(p.full_name, 'Unknown') AS other_user_name,
+    p.avatar_url                     AS other_user_avatar,
+    l.last_message,
+    l.last_message_at,
+    COALESCE(u.cnt, 0)                AS unread_count,
+    COALESCE(t.title, '')             AS task_title,
+    COALESCE(t.status, '')            AS task_status,
+    l.task_id || '-' || l.other_user_id::text AS conversation_id
+  FROM latest l
+  LEFT JOIN public.profiles p ON p.id = l.other_user_id
+  LEFT JOIN public.tasks    t ON t.id = l.task_id
+  LEFT JOIN unread          u ON u.task_id = l.task_id AND u.other_user_id = l.other_user_id
+  ORDER BY l.last_message_at DESC;
+END;
+$$;
+
+-- ── STEP 11: Notification preferences ───────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.notification_preferences (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE REFERENCES public.profiles (id) ON DELETE CASCADE,
+  task_updates boolean NOT NULL DEFAULT true,
+  new_messages boolean NOT NULL DEFAULT true,
+  payment_notifications boolean NOT NULL DEFAULT true,
+  marketing_notifications boolean NOT NULL DEFAULT false,
+  email_notifications boolean NOT NULL DEFAULT true,
+  push_notifications boolean NOT NULL DEFAULT true,
+  quiet_hours_start text,
+  quiet_hours_end text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage their own notification preferences" ON public.notification_preferences;
+CREATE POLICY "Users manage their own notification preferences"
+  ON public.notification_preferences FOR ALL
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+DROP TRIGGER IF EXISTS notification_preferences_set_updated_at ON public.notification_preferences;
+CREATE TRIGGER notification_preferences_set_updated_at
+  BEFORE UPDATE ON public.notification_preferences
+  FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
+
+-- ── STEP 12: Task applications (multi-applicant booking flow) ───────────────
+CREATE TABLE IF NOT EXISTS public.task_applications (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id     text NOT NULL REFERENCES public.tasks (id) ON DELETE CASCADE,
+  wysa_id     uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
+  status      text NOT NULL DEFAULT 'pending'
+              CHECK (status IN ('pending', 'accepted', 'rejected')),
+  message     text,
+  proposed_at timestamptz NOT NULL DEFAULT now(),
+  decided_at  timestamptz,
+  UNIQUE (task_id, wysa_id)
+);
+
+CREATE INDEX IF NOT EXISTS task_applications_task_id_idx ON public.task_applications (task_id);
+CREATE INDEX IF NOT EXISTS task_applications_wysa_id_idx ON public.task_applications (wysa_id);
+
+ALTER TABLE public.task_applications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "see own or task-owner applications" ON public.task_applications;
+CREATE POLICY "see own or task-owner applications"
+  ON public.task_applications FOR SELECT
+  TO authenticated
+  USING (
+    wysa_id = auth.uid()
+    OR task_id IN (SELECT id FROM public.tasks WHERE customer_id = auth.uid())
+  );
+
+DROP POLICY IF EXISTS "wysa inserts own application" ON public.task_applications;
+CREATE POLICY "wysa inserts own application"
+  ON public.task_applications FOR INSERT
+  TO authenticated
+  WITH CHECK (wysa_id = auth.uid());
+
+DROP POLICY IF EXISTS "task owner updates application status" ON public.task_applications;
+CREATE POLICY "task owner updates application status"
+  ON public.task_applications FOR UPDATE
+  TO authenticated
+  USING (task_id IN (SELECT id FROM public.tasks WHERE customer_id = auth.uid()));
+
+-- ── STEP 13: Push subscriptions for Web Push API ───────────────────────────
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
+  endpoint text NOT NULL,
+  p256dh text,
+  auth text,
+  user_agent text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  last_used_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON public.push_subscriptions (user_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON public.push_subscriptions (endpoint);
+
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own subscriptions" ON public.push_subscriptions;
+CREATE POLICY "Users can manage their own subscriptions"
+  ON public.push_subscriptions FOR ALL
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+DROP TRIGGER IF EXISTS update_push_subscriptions_updated_at ON public.push_subscriptions;
+CREATE TRIGGER update_push_subscriptions_updated_at
+  BEFORE UPDATE ON public.push_subscriptions
+  FOR EACH ROW EXECUTE PROCEDURE public.set_updated_at();
+
+-- ── STEP 14: Helper RPC for incrementing interested_count ───────────────────
+CREATE OR REPLACE FUNCTION public.increment_interested_count(task_id text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  UPDATE public.tasks
+  SET interested_count = COALESCE(interested_count, 0) + 1
+  WHERE id = task_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.increment_interested_count(text) TO authenticated;
+
 -- ── DONE ────────────────────────────────────────────────────────────────────
 SELECT 'All migrations applied successfully!' as result;

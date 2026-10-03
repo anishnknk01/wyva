@@ -20,7 +20,7 @@ export async function POST(
   // Verify the task exists and is still open for applications
   const { data: task } = await supabase
     .from("tasks")
-    .select("id, status, customer_id")
+    .select("id, status, customer_id, interested_count")
     .eq("id", taskId)
     .single();
 
@@ -58,7 +58,7 @@ export async function POST(
     // RPC may not exist — fall back to a direct update
     await supabase
       .from("tasks")
-      .update({ interested_count: (task as any).interested_count + 1 })
+      .update({ interested_count: Number((task as any)?.interested_count ?? 0) + 1 })
       .eq("id", taskId);
   }
 

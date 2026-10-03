@@ -23,13 +23,44 @@ export function useWorkerProfile() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/profile");
-    if (!res.ok) { setLoading(false); return; }
-    setData(await res.json());
-    setLoading(false);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/profile");
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
+      const json = await res.json();
+      setData(json);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/profile");
+        if (!res.ok) {
+          if (active) setLoading(false);
+          return;
+        }
+        const json = await res.json();
+        if (active) {
+          setData(json);
+          setLoading(false);
+        }
+      } catch {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return { data, loading, refresh: load };
 }
