@@ -171,12 +171,10 @@ export function MobileCreateTask() {
                !getFieldError('category') &&
                !getFieldError('area');
       case 2:
-        return values.date && 
-               values.time &&
-               !getFieldError('date') &&
-               !getFieldError('time');
+        // Check the actual date/time state variables, not form values
+        return date && time;
       case 3:
-        return values.budget > 0 && !getFieldError('budget');
+        return budget > 0;
       default:
         return true;
     }
