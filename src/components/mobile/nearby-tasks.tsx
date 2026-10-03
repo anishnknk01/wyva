@@ -30,6 +30,10 @@ interface NearbyTasksProps {
   maxDistance?: number // in kilometers
   limit?: number
   className?: string
+  /** Opens the shared filter sheet on Find Tasks — lets the compact empty
+   * state's "Adjust filters" action reuse the one real filter UI instead
+   * of a second, local one. */
+  onAdjustFilters?: () => void
 }
 
 // Mock task data with coordinates (in production, this would come from your API)
@@ -80,7 +84,7 @@ const mockNearbyTasks: TaskLocation[] = [
   }
 ]
 
-export function NearbyTasks({ maxDistance = 10, limit = 10, className }: NearbyTasksProps) {
+export function NearbyTasks({ maxDistance = 10, limit = 10, className, onAdjustFilters }: NearbyTasksProps) {
   const [tasks, setTasks] = useState<TaskLocation[]>([])
   const [loading, setLoading] = useState(false)
   const [sortBy, setSortBy] = useState<'distance' | 'budget' | 'date'>('distance')
@@ -225,22 +229,21 @@ export function NearbyTasks({ maxDistance = 10, limit = 10, className }: NearbyT
 
   return (
     <div className={className}>
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Header with Sort Options */}
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-base font-semibold text-gray-900">
             Nearby Tasks
           </h3>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSortBy(sortBy === 'distance' ? 'budget' : sortBy === 'budget' ? 'date' : 'distance')}
-            >
-              <Filter className="h-4 w-4 mr-1" />
-              {sortBy === 'distance' ? 'Distance' : sortBy === 'budget' ? 'Budget' : 'Time'}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setSortBy(sortBy === 'distance' ? 'budget' : sortBy === 'budget' ? 'date' : 'distance')}
+          >
+            <Filter className="h-3.5 w-3.5 mr-1" />
+            {sortBy === 'distance' ? 'Distance' : sortBy === 'budget' ? 'Budget' : 'Time'}
+          </Button>
         </div>
 
         {/* Loading State */}
@@ -257,22 +260,23 @@ export function NearbyTasks({ maxDistance = 10, limit = 10, className }: NearbyT
         {!loading && !locationLoading && (
           <>
             {tasks.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <MapPin className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
-                    No tasks found within {maxDistance}km of your location
-                  </p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="mt-2"
-                    onClick={() => loadNearbyTasks()}
-                  >
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-5 text-center">
+                <MapPin className="mx-auto mb-1.5 h-5 w-5 text-gray-400" />
+                <p className="text-sm font-medium text-gray-900">No tasks nearby</p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Try increasing your distance or changing your location.
+                </p>
+                <div className="mt-2.5 flex items-center justify-center gap-3">
+                  {onAdjustFilters && (
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onAdjustFilters}>
+                      Adjust filters
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => loadNearbyTasks()}>
                     Refresh
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ) : (
               <div className="space-y-3">
                 {tasks.map((task) => (

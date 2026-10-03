@@ -49,8 +49,10 @@ const homeCategories: { label: string; icon: React.ElementType; category?: TaskC
 
 // Same category → icon mapping, used as a fallback thumbnail on task cards
 // when a task has no uploaded photo — keeps the card's image slot filled
-// without inventing stock photography for real task data.
-const taskCategoryIcons: Record<string, React.ElementType> = {
+// without inventing stock photography for real task data. Exported so
+// other mobile screens (e.g. Find Tasks) can reuse the exact same card
+// treatment instead of duplicating it.
+export const taskCategoryIcons: Record<string, React.ElementType> = {
   Shopping: ShoppingCart,
   Errands: Truck,
   'Elder assistance': HeartHandshake,
@@ -211,8 +213,10 @@ export function MobileDashboard() {
 
 /** Image slot shared by both task cards: the task's own uploaded photo if
  * it has one, otherwise a tinted icon tile for its category. Never a
- * fabricated stock photo. */
-function TaskThumbnail({ task }: { task: Task }) {
+ * fabricated stock photo. Exported for reuse on Find Tasks so its cards
+ * match the Home screen's card style exactly rather than a second,
+ * slightly-different implementation. */
+export function TaskThumbnail({ task }: { task: Task }) {
   const photo = task.photos?.[0];
   if (photo) {
     return (
